@@ -1,0 +1,5 @@
+sample_id	ratio_basis	Bacteroides_thetaiotaomicron_expected_pct	Cutibacterium_acnes_expected_pct	Fusobacterium_nucleatum_expected_pct	Prevotella_melaninogenica_expected_pct	Veillonella_parvula_expected_pct	known_absent_species	sample_description	notes
+2PJGZM_4_sample_4	culture_volume	20.000000	20.000000	20.000000	20.000000	20.000000		Known-ratio mixture 4	Nominal volume ratio B:C:F:P:V=1:1:1:1:1; not adjusted for CFU/mL
+2PJGZM_5_sample_5	culture_volume	50.000000	0.000000	50.000000	0.000000	0.000000	Cutibacterium acnes;Prevotella melaninogenica;Veillonella parvula	F:B mixture	Nominal volume ratio B:C:F:P:V=1:0:1:0:0; not adjusted for CFU/mL
+2PJGZM_6_sample_6	culture_volume	0.000000	40.000000	0.000000	20.000000	40.000000	Bacteroides thetaiotaomicron;Fusobacterium nucleatum	Known-ratio mixture 6	Nominal volume ratio B:C:F:P:V=0:2:0:1:2; not adjusted for CFU/mL
+2PJGZM_7_sample_7	culture_volume	18.181818	18.181818	18.181818	27.272727	18.181818		Known-ratio mixture 7	Nominal volume ratio B:C:F:P:V=2:2:2:3:2; not adjusted for CFU/mL

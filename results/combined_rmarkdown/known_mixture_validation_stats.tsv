@@ -1,0 +1,5 @@
+sample_id	display_name	display_order	expected_present_species	mae_all_five_pct_points	mae_expected_present_pct_points	rmse_pct_points	bray_curtis_dissimilarity	bray_curtis_similarity	maximum_absolute_error_pct_points	validation_status
+2PJGZM_4_sample_4	5 anaerobes ratio 1	3	5	7.601607326125049	7.601607326125049	11.042148697319774	0.19004018315312624	0.8099598168468738	17.588930286361133	Pass proposed semi-quantitative criteria
+2PJGZM_5_sample_5	F:B	4	2	11.373956082781874	28.434890206954684	17.983803614158685	0.2843489020695468	0.7156510979304531	28.434890206954684	Review
+2PJGZM_6_sample_6	C:V:P	5	3	3.5686297814485384	5.94771630241423	4.942363170196822	0.08921574453621346	0.9107842554637865	8.921574453621346	Pass proposed semi-quantitative criteria
+2PJGZM_7_sample_7	5 anaerobes ratio 2	6	5	7.628581307422294	7.628581307422294	9.621847675834905	0.19071453268555735	0.8092854673144426	17.273288971844188	Pass proposed semi-quantitative criteria

@@ -1,0 +1,3 @@
+sample_id	reason
+2PJGZM_12_sample_12	Only 4 reads; all 210-362 bp and no near-full-length 16S reads
+2PJGZM_16_sample_16	Atypical raw read-length distribution with median length 1060 bp; excluded from the original cross-sectional primary analysis but retained after standard QC as the user-designated P1 48h longitudinal passage baseline

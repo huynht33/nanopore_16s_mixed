@@ -1,0 +1,16 @@
+sample_id	species	abundance_pct	estimated_counts	p6_display_name	p6_display_order
+2PJGZM_10_sample_10	Bacteroides thetaiotaomicron	78.36242201394803	3052.999961663416	P6 frozen stock	1
+2PJGZM_10_sample_10	Cutibacterium acnes	0	0	P6 frozen stock	1
+2PJGZM_10_sample_10	Fusobacterium nucleatum	3.619096328915482	140.99999297454718	P6 frozen stock	1
+2PJGZM_10_sample_10	Prevotella melaninogenica	0	0	P6 frozen stock	1
+2PJGZM_10_sample_10	Veillonella parvula	18.018481657136476	702.0000453620372	P6 frozen stock	1
+2PJGZM_8_sample_8	Bacteroides thetaiotaomicron	81.90625388000363	2707.0016907341196	P6_p1_24	2
+2PJGZM_8_sample_8	Cutibacterium acnes	0	0	P6_p1_24	2
+2PJGZM_8_sample_8	Fusobacterium nucleatum	5.204236006051436	171.99999999999994	P6_p1_24	2
+2PJGZM_8_sample_8	Prevotella melaninogenica	0	0	P6_p1_24	2
+2PJGZM_8_sample_8	Veillonella parvula	12.889510113944937	425.99830926588	P6_p1_24	2
+2PJGZM_3_sample_3	Bacteroides thetaiotaomicron	74.32511677400272	2722.529027431719	P6_p1_48	3
+2PJGZM_3_sample_3	Cutibacterium acnes	0	0	P6_p1_48	3
+2PJGZM_3_sample_3	Fusobacterium nucleatum	9.671727197765192	354.275367254139	P6_p1_48	3
+2PJGZM_3_sample_3	Prevotella melaninogenica	0	0	P6_p1_48	3
+2PJGZM_3_sample_3	Veillonella parvula	16.003156028232087	586.1956053141413	P6_p1_48	3

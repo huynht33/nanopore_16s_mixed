@@ -1,0 +1,21 @@
+sample_id	display_name	species	Expected: CFU-adjusted	Observed: custom Emu	difference_pct_points
+2PJGZM_4_sample_4	5 anaerobes ratio 1	Bacteroides thetaiotaomicron	32.582298	50.171228286361135	17.588930286361133
+2PJGZM_4_sample_4	5 anaerobes ratio 1	Cutibacterium acnes	29.715409	27.91611548350683	-1.7992935164931723
+2PJGZM_4_sample_4	5 anaerobes ratio 1	Fusobacterium nucleatum	26.483886	9.279161201180546	-17.204724798819452
+2PJGZM_4_sample_4	5 anaerobes ratio 1	Prevotella melaninogenica	2.648389	3.485395409949478	0.8370064099494781
+2PJGZM_4_sample_4	5 anaerobes ratio 1	Veillonella parvula	8.570018	9.14809961900201	0.5780816190020115
+2PJGZM_5_sample_5	F:B	Bacteroides thetaiotaomicron	55.162355	83.59724520695468	28.434890206954684
+2PJGZM_5_sample_5	F:B	Cutibacterium acnes	0	0	0
+2PJGZM_5_sample_5	F:B	Fusobacterium nucleatum	44.837645	16.402754793045318	-28.434890206954684
+2PJGZM_5_sample_5	F:B	Prevotella melaninogenica	0	0	0
+2PJGZM_5_sample_5	F:B	Veillonella parvula	0	0	0
+2PJGZM_6_sample_6	C:V:P	Bacteroides thetaiotaomicron	0	0	0
+2PJGZM_6_sample_6	C:V:P	Cutibacterium acnes	75.020685	66.09911054637865	-8.921574453621346
+2PJGZM_6_sample_6	C:V:P	Fusobacterium nucleatum	0	0	0
+2PJGZM_6_sample_6	C:V:P	Prevotella melaninogenica	3.343113	6.632782719186785	3.2896697191867856
+2PJGZM_6_sample_6	C:V:P	Veillonella parvula	21.636202	27.26810673443456	5.63190473443456
+2PJGZM_7_sample_7	5 anaerobes ratio 2	Bacteroides thetaiotaomicron	32.156484	34.894406732253664	2.737922732253665
+2PJGZM_7_sample_7	5 anaerobes ratio 2	Cutibacterium acnes	29.327062	40.68847325511877	11.361411255118771
+2PJGZM_7_sample_7	5 anaerobes ratio 2	Fusobacterium nucleatum	26.137771	8.864482028155813	-17.273288971844188
+2PJGZM_7_sample_7	5 anaerobes ratio 2	Prevotella melaninogenica	3.920666	8.892785281183299	4.972119281183298
+2PJGZM_7_sample_7	5 anaerobes ratio 2	Veillonella parvula	8.458017	6.6598527032884505	-1.7981642967115494

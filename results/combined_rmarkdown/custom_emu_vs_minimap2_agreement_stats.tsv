@@ -1,0 +1,3 @@
+comparison_scope	comparison_cells	mean_absolute_error_pct_points	root_mean_squared_error	pearson_correlation	spearman_correlation	maximum_absolute_difference_pct_points
+All five species in all selected samples	70	0.11347032668160538	0.3027238356094841	0.9999521506395889	0.9996372276940378	1.6057939846560743
+Species detected by either method	47	0.16899835888749737	0.3694423758144289	0.9999401730312065	0.9988436632747457	1.6057939846560743

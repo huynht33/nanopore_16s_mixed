@@ -1,0 +1,23 @@
+name: nanopore16s
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - python=3.12
+  - emu=3.6.2
+  - minimap2=2.31
+  - seqkit=2.13.0
+  - samtools=1.24
+  - nanoplot
+  - chopper
+  - r-base=4.5
+  - r-rmarkdown
+  - r-knitr
+  - r-readr
+  - r-dplyr
+  - r-tidyr
+  - r-ggplot2
+  - r-stringr
+  - r-scales
+  - r-purrr

@@ -1,0 +1,6 @@
+species	proposed_tax_id	match_source	status
+Bacteroides thetaiotaomicron	818	taxonomy.tsv exact field	OK
+Cutibacterium acnes	1747	taxonomy.tsv exact field	OK
+Fusobacterium nucleatum	851	taxonomy.tsv exact field	OK
+Prevotella melaninogenica	28132	taxonomy.tsv exact field	OK
+Veillonella parvula	29466	taxonomy.tsv exact field	OK

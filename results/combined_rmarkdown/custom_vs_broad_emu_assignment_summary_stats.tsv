@@ -1,0 +1,3 @@
+method	samples	mean_assigned_pct	median_assigned_pct	sd_assigned_pct	minimum_assigned_pct	maximum_assigned_pct
+Custom Emu: five references	14	97.68374851077424	98.0092526567067	1.1422276848620623	94.03136064744564	98.74074074074075
+Broad Emu: any classified taxon	14	98.02858785751756	98.38564485330836	0.9467550366970012	95.0935761254426	98.91358024691358

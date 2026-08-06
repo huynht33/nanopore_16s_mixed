@@ -1,0 +1,11 @@
+software	version	analysis_context
+Emu	3.6.2	Superdome command-line analysis
+minimap2	2.31-r1302	Superdome command-line analysis and sample 16 cross-check
+seqkit	2.13.0	Superdome nanopore16s Conda environment
+samtools	1.24	Superdome nanopore16s Conda environment
+Python	3.12.13	Superdome nanopore16s Conda environment
+R	4.5.3	Superdome system R
+R	4.5.2	Local macOS RStudio figure analysis
+NanoPlot	not captured	Available in Superdome nanopore16s Conda environment
+Chopper	not captured	Available in Superdome nanopore16s Conda environment; Q10 filtering
+NanoFilt	not installed	Not used

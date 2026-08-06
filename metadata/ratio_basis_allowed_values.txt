@@ -1,0 +1,11 @@
+Allowed ratio_basis values:
+purified_amplicon_molar
+purified_amplicon_mass
+gDNA_mass
+estimated_16S_copy
+cell_count
+CFU
+culture_volume
+unknown
+
+Known purified amplicon molar ratios are the most direct comparison with full-length 16S read percentages. gDNA mass, cell count, CFU, and culture-volume ratios are biological/input ratios and can differ from sequencing read percentages because of DNA extraction efficiency, 16S copy number, primer/PCR bias, and survival/culturability.

@@ -1,0 +1,2567 @@
+---
+title: "Nanopore Full-Length 16S: Emu Figures"
+author: "Kalan Lab"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: show
+---
+
+This notebook is intentionally divided into small chunks so that every data
+transformation and graph can be inspected in RStudio. It uses only samples
+listed in `metadata/sample_name_key.tsv`. Sample 16 is listed there, but its
+reviewed exploratory outputs are integrated separately because it was excluded
+from the original cross-sectional batch run.
+
+# 1. Setup
+
+```{r setup}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  dpi = 150
+)
+
+required_packages <- c(
+  "readr", "dplyr", "tidyr", "ggplot2", "stringr", "scales", "knitr"
+)
+
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
+]
+
+if (length(missing_packages) > 0) {
+  stop(
+    "Install these R packages before continuing: ",
+    paste(missing_packages, collapse = ", ")
+  )
+}
+
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
+library(scales)
+library(knitr)
+
+project_root <- normalizePath(".", mustWork = TRUE)
+path <- function(...) file.path(project_root, ...)
+
+figure_dir <- path("results", "figures_rmarkdown")
+table_dir <- path("results", "combined_rmarkdown")
+dir.create(figure_dir, recursive = TRUE, showWarnings = FALSE)
+dir.create(table_dir, recursive = TRUE, showWarnings = FALSE)
+```
+
+# 2. Fixed species order and colors
+
+```{r species-settings}
+species_order <- c(
+  "Bacteroides thetaiotaomicron",
+  "Cutibacterium acnes",
+  "Fusobacterium nucleatum",
+  "Prevotella melaninogenica",
+  "Veillonella parvula"
+)
+
+unknown_label <- "Unknown / other"
+stack_order <- c(species_order, unknown_label)
+
+species_colors <- c(
+  "Bacteroides thetaiotaomicron" = "#0072B2",
+  "Cutibacterium acnes" = "#CC79A7",
+  "Fusobacterium nucleatum" = "#D55E00",
+  "Prevotella melaninogenica" = "#009E73",
+  "Veillonella parvula" = "#E69F00",
+  "Unknown / other" = "#8A8A8A"
+)
+
+assignment_method_colors <- c(
+  "Custom Emu: five references" = "#0072B2",
+  "Broad Emu: any classified taxon" = "#D55E00"
+)
+
+minimap_status_colors <- c(
+  "Confident" = "#009E73",
+  "Ambiguous" = "#E69F00",
+  "Unassigned" = "#7A7A7A"
+)
+
+theme_16s <- theme_bw(base_size = 11) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 40, hjust = 1),
+    legend.position = "bottom",
+    legend.text = element_text(size = 9)
+  )
+```
+
+# 3. Load the sample-name key
+
+Edit `metadata/sample_name_key.tsv` to change a display name or the plotting
+order. Samples absent from this file are excluded from all graphs below.
+
+```{r load-sample-key}
+sample_key_file <- path("metadata", "sample_name_key.tsv")
+if (!file.exists(sample_key_file)) {
+  stop("Missing sample-name key: ", sample_key_file)
+}
+
+sample_key <- read_tsv(sample_key_file, show_col_types = FALSE) %>%
+  arrange(display_order)
+
+if (anyDuplicated(sample_key$sample_id)) {
+  stop("Duplicate sample_id values in metadata/sample_name_key.tsv")
+}
+if (anyDuplicated(sample_key$display_name)) {
+  stop("Duplicate display_name values in metadata/sample_name_key.tsv")
+}
+if (anyDuplicated(sample_key$display_order)) {
+  stop("Duplicate display_order values in metadata/sample_name_key.tsv")
+}
+
+selected_sample_ids <- sample_key$sample_id
+selected_sample_names <- sample_key$display_name
+
+kable(sample_key, caption = "Samples retained for the R analysis")
+```
+
+# 4. Load Emu and expected-ratio tables
+
+```{r load-data}
+custom_file <- path(
+  "results", "combined",
+  "custom_emu_expected_species_abundance_renormalized.tsv"
+)
+broad_species_file <- path(
+  "results", "combined", "broad_emu_species_abundance.tsv"
+)
+broad_accounting_file <- path(
+  "results", "combined", "broad_emu_read_accounting.tsv"
+)
+minimap_status_file <- path(
+  "results", "combined", "minimap2_read_status_summary.tsv"
+)
+minimap_confident_file <- path(
+  "results", "combined", "minimap2_confident_reference_abundance.tsv"
+)
+expected_file <- path("metadata", "expected_ratios_template.tsv")
+sample16_id <- "2PJGZM_16_sample_16"
+sample16_custom_file <- path(
+  "results",
+  "exploratory_sample16_standard_filters",
+  "emu",
+  "sample16_exploratory_rel-abundance.tsv"
+)
+sample16_broad_file <- path(
+  "results",
+  "exploratory_sample16_standard_filters",
+  "broad_emu_retry1",
+  "sample16_broad_exploratory_rel-abundance.tsv"
+)
+sample16_minimap_file <- path(
+  "results",
+  "minimap2",
+  sample16_id,
+  paste0(sample16_id, ".per_read_assignments.tsv")
+)
+
+required_files <- c(
+  custom_file,
+  broad_species_file,
+  broad_accounting_file,
+  minimap_status_file,
+  minimap_confident_file,
+  expected_file,
+  sample16_custom_file,
+  sample16_broad_file,
+  sample16_minimap_file
+)
+missing_files <- required_files[!file.exists(required_files)]
+
+if (length(missing_files) > 0) {
+  stop("Missing input file(s):\n", paste(missing_files, collapse = "\n"))
+}
+
+custom_raw <- read_tsv(custom_file, show_col_types = FALSE)
+broad_species_raw <- read_tsv(broad_species_file, show_col_types = FALSE)
+broad_accounting_raw <- read_tsv(
+  broad_accounting_file,
+  show_col_types = FALSE
+)
+minimap_status_raw <- read_tsv(
+  minimap_status_file,
+  show_col_types = FALSE
+)
+minimap_confident_raw <- read_tsv(
+  minimap_confident_file,
+  show_col_types = FALSE
+)
+expected_raw <- read_tsv(expected_file, show_col_types = FALSE)
+```
+
+## Integrate the separately processed sample 16
+
+Sample 16 was processed separately after review of its atypical raw
+read-length distribution. This chunk converts its native Emu outputs and
+minimap2 per-read assignments into the same structures as the combined
+primary-analysis tables. Existing sample 16 rows are replaced, making this
+chunk safe to rerun after future combined tables are regenerated.
+
+```{r integrate-sample16-results}
+special_emu_rows <- c(
+  "unmapped", "mapped_filtered", "mapped_unclassified"
+)
+
+sample16_custom_native <- read_tsv(
+  sample16_custom_file,
+  show_col_types = FALSE,
+  na = c("", "NA")
+)
+sample16_custom_total_reads <- sum(
+  sample16_custom_native$`estimated counts`,
+  na.rm = TRUE
+)
+sample16_custom_expected_reads <- sample16_custom_native %>%
+  filter(species %in% species_order) %>%
+  summarise(total = sum(`estimated counts`, na.rm = TRUE)) %>%
+  pull(total)
+
+sample16_custom_rows <- sample16_custom_native %>%
+  filter(species %in% species_order) %>%
+  transmute(
+    sample_id = sample16_id,
+    species,
+    emu_abundance_pct_renormalized_among_expected =
+      100 * `estimated counts` / sample16_custom_expected_reads,
+    emu_abundance_pct_all_usable_reads =
+      100 * `estimated counts` / sample16_custom_total_reads,
+    estimated_counts = `estimated counts`,
+    source_file = sample16_custom_file
+  ) %>%
+  complete(
+    sample_id = sample16_id,
+    species = species_order,
+    fill = list(
+      emu_abundance_pct_renormalized_among_expected = 0,
+      emu_abundance_pct_all_usable_reads = 0,
+      estimated_counts = 0,
+      source_file = sample16_custom_file
+    )
+  )
+
+custom_raw <- custom_raw %>%
+  filter(sample_id != sample16_id) %>%
+  bind_rows(sample16_custom_rows)
+
+sample16_broad_native <- read_tsv(
+  sample16_broad_file,
+  show_col_types = FALSE,
+  na = c("", "NA")
+)
+
+sample16_broad_taxa <- sample16_broad_native %>%
+  filter(
+    !tax_id %in% special_emu_rows,
+    !is.na(species),
+    species != ""
+  )
+
+sample16_broad_total_reads <- sum(
+  sample16_broad_native$`estimated counts`,
+  na.rm = TRUE
+)
+sample16_broad_classified_reads <- sum(
+  sample16_broad_taxa$`estimated counts`,
+  na.rm = TRUE
+)
+sample16_expected_reads <- sample16_broad_taxa %>%
+  filter(species %in% species_order) %>%
+  summarise(total = sum(`estimated counts`, na.rm = TRUE)) %>%
+  pull(total)
+sample16_unexpected_reads <- sample16_broad_taxa %>%
+  filter(!species %in% species_order) %>%
+  summarise(total = sum(`estimated counts`, na.rm = TRUE)) %>%
+  pull(total)
+
+sample16_special_count <- function(category) {
+  sample16_broad_native %>%
+    filter(tax_id == category) %>%
+    summarise(total = sum(`estimated counts`, na.rm = TRUE)) %>%
+    pull(total)
+}
+
+sample16_unmapped_reads <- sample16_special_count("unmapped")
+sample16_filtered_reads <- sample16_special_count("mapped_filtered")
+sample16_mapped_unclassified_reads <-
+  sample16_special_count("mapped_unclassified")
+sample16_taxonomy_unclassified_reads <- sample16_broad_native %>%
+  filter(
+    !tax_id %in% special_emu_rows,
+    is.na(species) | species == ""
+  ) %>%
+  summarise(total = sum(`estimated counts`, na.rm = TRUE)) %>%
+  pull(total)
+
+sample16_broad_rows <- sample16_broad_taxa %>%
+  transmute(
+    sample_id = sample16_id,
+    tax_id = as.numeric(tax_id),
+    species,
+    genus,
+    taxon_category = if_else(
+      species %in% species_order,
+      "expected_species",
+      "unexpected_taxon"
+    ),
+    estimated_counts = `estimated counts`,
+    emu_abundance_pct_among_classified =
+      100 * `estimated counts` / sample16_broad_classified_reads,
+    abundance_pct_all_usable_reads =
+      100 * `estimated counts` / sample16_broad_total_reads,
+    source_file = sample16_broad_file
+  )
+
+broad_species_raw <- broad_species_raw %>%
+  filter(sample_id != sample16_id) %>%
+  bind_rows(sample16_broad_rows)
+
+sample16_broad_accounting <- tibble(
+  sample_id = sample16_id,
+  usable_reads = sample16_broad_total_reads,
+  emu_classified_estimated_reads = sample16_broad_classified_reads,
+  expected_species_estimated_reads = sample16_expected_reads,
+  unexpected_species_estimated_reads = sample16_unexpected_reads,
+  mapped_unclassified_reads = sample16_mapped_unclassified_reads,
+  mapped_filtered_reads = sample16_filtered_reads,
+  unmapped_reads = sample16_unmapped_reads,
+  taxonomy_unclassified_reads = sample16_taxonomy_unclassified_reads,
+  total_non_expected_pct_all_usable_reads = 100 * (
+    sample16_unexpected_reads +
+      sample16_mapped_unclassified_reads +
+      sample16_filtered_reads +
+      sample16_unmapped_reads +
+      sample16_taxonomy_unclassified_reads
+  ) / sample16_broad_total_reads,
+  status = "completed_exploratory"
+)
+
+broad_accounting_raw <- broad_accounting_raw %>%
+  filter(sample_id != sample16_id) %>%
+  bind_rows(sample16_broad_accounting)
+
+sample16_minimap_native <- read_tsv(
+  sample16_minimap_file,
+  show_col_types = FALSE,
+  na = c("", "NA")
+)
+sample16_minimap_total_reads <- nrow(sample16_minimap_native)
+sample16_minimap_confident_reads <- sum(
+  sample16_minimap_native$assignment_status == "confident"
+)
+sample16_minimap_ambiguous_reads <- sum(
+  sample16_minimap_native$assignment_status == "ambiguous"
+)
+sample16_minimap_unassigned_reads <- sum(
+  sample16_minimap_native$assignment_status == "unassigned"
+)
+
+sample16_minimap_status <- tibble(
+  sample_id = sample16_id,
+  total_reads = sample16_minimap_total_reads,
+  confident_reads = sample16_minimap_confident_reads,
+  ambiguous_reads = sample16_minimap_ambiguous_reads,
+  unassigned_reads = sample16_minimap_unassigned_reads,
+  confident_pct =
+    100 * confident_reads / total_reads,
+  ambiguous_pct =
+    100 * ambiguous_reads / total_reads,
+  unassigned_pct =
+    100 * unassigned_reads / total_reads
+)
+
+minimap_status_raw <- minimap_status_raw %>%
+  filter(sample_id != sample16_id) %>%
+  bind_rows(sample16_minimap_status)
+
+sample16_minimap_confident <- sample16_minimap_native %>%
+  filter(assignment_status == "confident") %>%
+  count(best_reference, name = "confident_reads") %>%
+  transmute(
+    sample_id = sample16_id,
+    reference = best_reference,
+    confident_reads,
+    percentage_all_input_reads =
+      100 * confident_reads / sample16_minimap_total_reads,
+    percentage_among_confident_reads =
+      100 * confident_reads / sample16_minimap_confident_reads
+  )
+
+minimap_confident_raw <- minimap_confident_raw %>%
+  filter(sample_id != sample16_id) %>%
+  bind_rows(sample16_minimap_confident)
+
+tibble(
+  method = c("Custom Emu", "Broad Emu", "Minimap2"),
+  sample16_input_reads = c(
+    sample16_custom_total_reads,
+    sample16_broad_total_reads,
+    sample16_minimap_total_reads
+  ),
+  assigned_or_confident_reads = c(
+    sample16_custom_expected_reads,
+    sample16_broad_classified_reads,
+    sample16_minimap_confident_reads
+  )
+) %>%
+  kable(
+    digits = 3,
+    caption = "Sample 16 supplemental-result integration check"
+  )
+```
+
+## Inspect the raw columns
+
+```{r inspect-inputs}
+list(
+  custom_columns = names(custom_raw),
+  broad_species_columns = names(broad_species_raw),
+  broad_accounting_columns = names(broad_accounting_raw),
+  minimap_status_columns = names(minimap_status_raw),
+  minimap_confident_columns = names(minimap_confident_raw),
+  expected_ratio_columns = names(expected_raw)
+)
+```
+
+```{r validate-selected-samples}
+missing_custom <- setdiff(selected_sample_ids, unique(custom_raw$sample_id))
+missing_broad <- setdiff(
+  selected_sample_ids,
+  unique(broad_accounting_raw$sample_id)
+)
+missing_minimap <- setdiff(
+  selected_sample_ids,
+  unique(minimap_status_raw$sample_id)
+)
+
+if (length(missing_custom) > 0) {
+  stop(
+    "Selected samples missing from custom Emu results: ",
+    paste(missing_custom, collapse = ", ")
+  )
+}
+if (length(missing_broad) > 0) {
+  stop(
+    "Selected samples missing from broad Emu results: ",
+    paste(missing_broad, collapse = ", ")
+  )
+}
+if (length(missing_minimap) > 0) {
+  stop(
+    "Selected samples missing from minimap2 results: ",
+    paste(missing_minimap, collapse = ", ")
+  )
+}
+
+tibble(
+  data_source = c(
+    "Custom Emu",
+    "Broad Emu accounting",
+    "Minimap2 read status"
+  ),
+  selected_samples_found = c(
+    sum(selected_sample_ids %in% unique(custom_raw$sample_id)),
+    sum(selected_sample_ids %in% unique(broad_accounting_raw$sample_id)),
+    sum(selected_sample_ids %in% unique(minimap_status_raw$sample_id))
+  ),
+  selected_samples_expected = length(selected_sample_ids)
+) %>%
+  kable(caption = "Input completeness check")
+```
+
+# 5. Custom five-reference Emu stacked abundance
+
+This graph uses the custom database and renormalizes the five expected species
+to 100%. It describes consortium composition among reads assigned to those five
+references. It does not display unassigned reads.
+
+## Prepare custom Emu plotting data
+
+```{r prepare-custom-data}
+custom_plot_data <- custom_raw %>%
+  filter(sample_id %in% selected_sample_ids) %>%
+  select(
+    sample_id,
+    species,
+    abundance_pct = emu_abundance_pct_renormalized_among_expected
+  ) %>%
+  complete(
+    sample_id = selected_sample_ids,
+    species = species_order,
+    fill = list(abundance_pct = 0)
+  ) %>%
+  left_join(sample_key, by = "sample_id") %>%
+  mutate(
+    display_name = factor(display_name, levels = selected_sample_names),
+    species = factor(species, levels = species_order)
+  ) %>%
+  arrange(display_order, species)
+
+custom_sum_check <- custom_plot_data %>%
+  group_by(sample_id, display_name) %>%
+  summarise(total_pct = sum(abundance_pct), .groups = "drop")
+
+kable(
+  custom_sum_check,
+  digits = 3,
+  caption = "Custom Emu percentage-sum check"
+)
+```
+
+## Draw the custom Emu graph
+
+```{r plot-custom-stacked, fig.width=12, fig.height=6}
+custom_stacked_plot <- ggplot(
+  custom_plot_data,
+  aes(x = display_name, y = abundance_pct, fill = species)
+) +
+  geom_col(width = 0.82, color = "white", linewidth = 0.15) +
+  scale_fill_manual(values = species_colors[species_order], drop = FALSE) +
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 20),
+    labels = label_number(suffix = "%"),
+    expand = expansion(mult = c(0, 0))
+  ) +
+  coord_cartesian(ylim = c(0, 100)) +
+  labs(
+    x = NULL,
+    y = "Abundance among five expected species",
+    fill = NULL,
+    title = "Custom five-reference Emu"
+  ) +
+  theme_16s
+
+custom_stacked_plot
+```
+
+```{r save-custom-stacked}
+write_tsv(
+  custom_plot_data %>%
+    mutate(
+      display_name = as.character(display_name),
+      species = as.character(species)
+    ),
+  file.path(table_dir, "custom_emu_stacked_plot_data.tsv")
+)
+
+ggsave(
+  file.path(figure_dir, "custom_emu_stacked_selected_samples.png"),
+  custom_stacked_plot,
+  width = 12,
+  height = 6,
+  dpi = 300
+)
+ggsave(
+  file.path(figure_dir, "custom_emu_stacked_selected_samples.pdf"),
+  custom_stacked_plot,
+  width = 12,
+  height = 6
+)
+```
+
+# 6. Broad Emu: five known species plus unknown/other
+
+This graph uses assignments from the published broad Emu database, not the
+custom FASTA database. The five named segments are exact species assignments
+from broad Emu. `Unknown / other` is everything not assigned to one of those
+five exact species, including unexpected taxa, unmapped reads, filtered
+alignments, and unclassified reads.
+
+No broad Emu rerun is needed when
+`results/combined/broad_emu_species_abundance.tsv` and
+`results/combined/broad_emu_read_accounting.tsv` contain every selected sample.
+
+## Prepare broad Emu known-species percentages
+
+```{r prepare-broad-known}
+broad_known <- broad_species_raw %>%
+  filter(
+    sample_id %in% selected_sample_ids,
+    species %in% species_order
+  ) %>%
+  group_by(sample_id, species) %>%
+  summarise(
+    abundance_pct = sum(abundance_pct_all_usable_reads),
+    .groups = "drop"
+  ) %>%
+  complete(
+    sample_id = selected_sample_ids,
+    species = species_order,
+    fill = list(abundance_pct = 0)
+  )
+
+kable(
+  broad_known %>%
+    filter(sample_id %in% head(selected_sample_ids, 4)),
+  digits = 3,
+  caption = "Example broad Emu exact-species percentages"
+)
+```
+
+## Calculate unknown/other
+
+```{r prepare-broad-unknown}
+broad_unknown <- broad_accounting_raw %>%
+  filter(sample_id %in% selected_sample_ids) %>%
+  transmute(
+    sample_id,
+    species = unknown_label,
+    abundance_pct = total_non_expected_pct_all_usable_reads
+  )
+
+broad_plot_data <- bind_rows(broad_known, broad_unknown) %>%
+  left_join(sample_key, by = "sample_id") %>%
+  mutate(
+    display_name = factor(display_name, levels = selected_sample_names),
+    species = factor(species, levels = stack_order)
+  ) %>%
+  arrange(display_order, species)
+
+broad_sum_check <- broad_plot_data %>%
+  group_by(sample_id, display_name) %>%
+  summarise(total_pct = sum(abundance_pct), .groups = "drop")
+
+kable(
+  broad_sum_check,
+  digits = 3,
+  caption = "Broad Emu percentage-sum check"
+)
+```
+
+## Inspect what contributes to unknown/other
+
+```{r inspect-broad-unknown-components}
+broad_unknown_components <- broad_accounting_raw %>%
+  filter(sample_id %in% selected_sample_ids) %>%
+  left_join(sample_key, by = "sample_id") %>%
+  transmute(
+    display_order,
+    display_name,
+    usable_reads,
+    unexpected_taxa_pct =
+      100 * unexpected_species_estimated_reads / usable_reads,
+    mapped_unclassified_pct =
+      100 * mapped_unclassified_reads / usable_reads,
+    alignment_filtered_pct =
+      100 * mapped_filtered_reads / usable_reads,
+    unmapped_pct =
+      100 * unmapped_reads / usable_reads,
+    taxonomy_unclassified_pct =
+      100 * taxonomy_unclassified_reads / usable_reads,
+    total_unknown_or_other_pct =
+      total_non_expected_pct_all_usable_reads
+  ) %>%
+  arrange(display_order)
+
+kable(
+  broad_unknown_components %>% select(-display_order),
+  digits = 3,
+  caption = "Components of broad Emu unknown/other"
+)
+```
+
+## Draw the broad Emu graph
+
+```{r plot-broad-stacked, fig.width=12, fig.height=6}
+broad_stacked_plot <- ggplot(
+  broad_plot_data,
+  aes(x = display_name, y = abundance_pct, fill = species)
+) +
+  geom_col(width = 0.82, color = "white", linewidth = 0.15) +
+  scale_fill_manual(values = species_colors[stack_order], drop = FALSE) +
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 20),
+    labels = label_number(suffix = "%"),
+    expand = expansion(mult = c(0, 0))
+  ) +
+  coord_cartesian(ylim = c(0, 100)) +
+  labs(
+    x = NULL,
+    y = "Abundance among all QC-passing reads",
+    fill = NULL,
+    title = "Published broad Emu database",
+    subtitle = "Five exact species assignments plus unknown/other"
+  ) +
+  theme_16s
+
+broad_stacked_plot
+```
+
+```{r save-broad-stacked}
+write_tsv(
+  broad_plot_data %>%
+    mutate(
+      display_name = as.character(display_name),
+      species = as.character(species)
+    ),
+  file.path(table_dir, "broad_emu_known_plus_unknown_plot_data.tsv")
+)
+write_tsv(
+  broad_unknown_components,
+  file.path(table_dir, "broad_emu_unknown_components.tsv")
+)
+
+ggsave(
+  file.path(
+    figure_dir,
+    "broad_emu_five_species_plus_unknown_selected_samples.png"
+  ),
+  broad_stacked_plot,
+  width = 12,
+  height = 6,
+  dpi = 300
+)
+ggsave(
+  file.path(
+    figure_dir,
+    "broad_emu_five_species_plus_unknown_selected_samples.pdf"
+  ),
+  broad_stacked_plot,
+  width = 12,
+  height = 6
+)
+```
+
+# 7. Samples 4-7: custom Emu versus expected CFU ratios
+
+The expected percentages are CFU-adjusted. They were calculated from the input
+volume ratios and the measured strain-specific log10 CFU/mL values. The
+observed custom Emu values are renormalized among the five expected species, so
+both bars sum to 100%.
+
+## Convert expected percentages to long format
+
+```{r prepare-expected-data}
+comparison_ids <- paste0("2PJGZM_", 4:7, "_sample_", 4:7)
+
+expected_long <- expected_raw %>%
+  filter(sample_id %in% comparison_ids) %>%
+  select(sample_id, ratio_basis, ends_with("_expected_pct")) %>%
+  pivot_longer(
+    cols = ends_with("_expected_pct"),
+    names_to = "species",
+    values_to = "abundance_pct"
+  ) %>%
+  mutate(
+    species = str_remove(species, "_expected_pct$"),
+    species = str_replace_all(species, "_", " ")
+  )
+
+if (!all(expected_long$ratio_basis == "CFU")) {
+  stop("Samples 4-7 are expected to use CFU-adjusted expected percentages")
+}
+
+expected_long %>%
+  group_by(sample_id) %>%
+  summarise(expected_total_pct = sum(abundance_pct), .groups = "drop") %>%
+  kable(digits = 3, caption = "Expected-ratio percentage-sum check")
+```
+
+## Combine expected and observed values
+
+```{r combine-expected-observed}
+observed_4_7 <- custom_plot_data %>%
+  filter(sample_id %in% comparison_ids) %>%
+  transmute(
+    sample_id,
+    species = as.character(species),
+    abundance_pct,
+    result_type = "Observed: custom Emu"
+  )
+
+expected_4_7 <- expected_long %>%
+  transmute(
+    sample_id,
+    species,
+    abundance_pct,
+    result_type = "Expected: CFU-adjusted"
+  )
+
+comparison_plot_data <- bind_rows(expected_4_7, observed_4_7) %>%
+  left_join(sample_key, by = "sample_id") %>%
+  mutate(
+    display_name = factor(
+      display_name,
+      levels = sample_key %>%
+        filter(sample_id %in% comparison_ids) %>%
+        arrange(display_order) %>%
+        pull(display_name)
+    ),
+    species = factor(species, levels = species_order),
+    result_type = factor(
+      result_type,
+      levels = c("Expected: CFU-adjusted", "Observed: custom Emu")
+    )
+  )
+
+comparison_table <- comparison_plot_data %>%
+  mutate(
+    display_name = as.character(display_name),
+    species = as.character(species),
+    result_type = as.character(result_type)
+  ) %>%
+  select(sample_id, display_name, species, result_type, abundance_pct) %>%
+  pivot_wider(
+    names_from = result_type,
+    values_from = abundance_pct
+  ) %>%
+  mutate(
+    difference_pct_points =
+      `Observed: custom Emu` - `Expected: CFU-adjusted`
+  )
+
+kable(
+  comparison_table,
+  digits = 2,
+  caption = "Expected and observed percentages for samples 4-7"
+)
+```
+
+## Draw paired stacked bars
+
+```{r plot-expected-observed, fig.width=11, fig.height=6}
+expected_observed_plot <- ggplot(
+  comparison_plot_data,
+  aes(x = result_type, y = abundance_pct, fill = species)
+) +
+  geom_col(width = 0.72, color = "white", linewidth = 0.15) +
+  facet_wrap(
+    vars(display_name),
+    nrow = 1,
+    labeller = label_wrap_gen(width = 18)
+  ) +
+  scale_fill_manual(values = species_colors[species_order], drop = FALSE) +
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 20),
+    labels = label_number(suffix = "%"),
+    expand = expansion(mult = c(0, 0))
+  ) +
+  coord_cartesian(ylim = c(0, 100)) +
+  labs(
+    x = NULL,
+    y = "Composition",
+    fill = NULL,
+    title = "Expected CFU composition versus custom Emu",
+    subtitle = "Samples 4-7; observed values renormalized among five species"
+  ) +
+  theme_16s +
+  theme(
+    axis.text.x = element_text(angle = 25, hjust = 1),
+    strip.text = element_text(face = "bold")
+  )
+
+expected_observed_plot
+```
+
+```{r save-expected-observed}
+write_tsv(
+  comparison_table,
+  file.path(table_dir, "samples_4_7_expected_vs_custom_emu.tsv")
+)
+
+ggsave(
+  file.path(
+    figure_dir,
+    "samples_4_7_expected_cfu_vs_custom_emu.png"
+  ),
+  expected_observed_plot,
+  width = 11,
+  height = 6,
+  dpi = 300
+)
+ggsave(
+  file.path(
+    figure_dir,
+    "samples_4_7_expected_cfu_vs_custom_emu.pdf"
+  ),
+  expected_observed_plot,
+  width = 11,
+  height = 6
+)
+```
+
+# 8. Known-mixture validation metrics
+
+For each known mixture, the error is calculated from the five expected and
+observed species percentages:
+
+* **MAE across all five species** is the mean absolute percentage-point
+  difference. Lower values indicate better agreement.
+* **MAE among expected-present species** excludes organisms with an expected
+  percentage of zero. This prevents correctly absent organisms from making a
+  sparse mixture appear more accurate than its recovered organisms actually
+  are.
+* **RMSE** gives more weight to large organism-specific errors.
+* **Bray-Curtis similarity** ranges from 0 to 1, with 1 indicating identical
+  expected and observed compositions.
+
+When both compositions sum to 100% and the same five species are used,
+Bray-Curtis similarity is calculated as:
+
+`1 - sum(abs(observed - expected)) / 200`
+
+MAE and Bray-Curtis similarity therefore summarize the same absolute
+differences on different scales; they should not be treated as independent
+validation evidence.
+
+## Calculate per-mixture validation statistics
+
+```{r calculate-known-mixture-validation}
+known_mixture_validation <- comparison_table %>%
+  left_join(
+    sample_key %>% select(sample_id, display_order),
+    by = "sample_id"
+  ) %>%
+  group_by(sample_id, display_name, display_order) %>%
+  summarise(
+    expected_present_species =
+      sum(`Expected: CFU-adjusted` > 0),
+    mae_all_five_pct_points =
+      mean(abs(difference_pct_points)),
+    mae_expected_present_pct_points =
+      mean(
+        abs(
+          difference_pct_points[
+            `Expected: CFU-adjusted` > 0
+          ]
+        )
+      ),
+    rmse_pct_points =
+      sqrt(mean(difference_pct_points^2)),
+    bray_curtis_dissimilarity =
+      sum(abs(difference_pct_points)) /
+      sum(
+        `Expected: CFU-adjusted` +
+        `Observed: custom Emu`
+      ),
+    bray_curtis_similarity =
+      1 - bray_curtis_dissimilarity,
+    maximum_absolute_error_pct_points =
+      max(abs(difference_pct_points)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    validation_status = if_else(
+      mae_all_five_pct_points <= 10 &
+        bray_curtis_similarity >= 0.80,
+      "Pass proposed semi-quantitative criteria",
+      "Review"
+    )
+  ) %>%
+  arrange(display_order)
+
+kable(
+  known_mixture_validation %>%
+    select(
+      display_name,
+      expected_present_species,
+      mae_all_five_pct_points,
+      mae_expected_present_pct_points,
+      rmse_pct_points,
+      bray_curtis_similarity,
+      maximum_absolute_error_pct_points,
+      validation_status
+    ),
+  digits = 3,
+  caption = "Known-mixture validation statistics"
+)
+```
+
+## Display overall known-mixture statistics
+
+```{r summarize-known-mixture-validation}
+known_mixture_overall_stats <- comparison_table %>%
+  summarise(
+    samples = n_distinct(sample_id),
+    species_sample_cells = n(),
+    mean_absolute_error_pct_points =
+      mean(abs(difference_pct_points)),
+    root_mean_squared_error =
+      sqrt(mean(difference_pct_points^2)),
+    pearson_correlation = cor(
+      `Expected: CFU-adjusted`,
+      `Observed: custom Emu`,
+      method = "pearson"
+    ),
+    spearman_correlation = cor(
+      `Expected: CFU-adjusted`,
+      `Observed: custom Emu`,
+      method = "spearman"
+    ),
+    mixtures_passing_proposed_criteria =
+      sum(
+        known_mixture_validation$validation_status ==
+          "Pass proposed semi-quantitative criteria"
+      ),
+    mixtures_reviewed =
+      sum(
+        known_mixture_validation$validation_status ==
+          "Review"
+      )
+  )
+
+kable(
+  known_mixture_overall_stats,
+  digits = 3,
+  caption = "Overall known-mixture validation statistics"
+)
+```
+
+## Draw the known-mixture validation figure
+
+The dashed lines show the proposed exploratory criteria: MAE no greater than
+10 percentage points and Bray-Curtis similarity of at least 0.80. These are
+study-specific criteria, not universal thresholds.
+
+```{r plot-known-mixture-validation, fig.width=11, fig.height=5.5}
+known_mixture_plot_data <- known_mixture_validation %>%
+  select(
+    display_name,
+    display_order,
+    validation_status,
+    mae_all_five_pct_points,
+    bray_curtis_similarity
+  ) %>%
+  pivot_longer(
+    cols = c(
+      mae_all_five_pct_points,
+      bray_curtis_similarity
+    ),
+    names_to = "metric",
+    values_to = "metric_value"
+  ) %>%
+  mutate(
+    display_name = factor(
+      display_name,
+      levels = known_mixture_validation$display_name
+    ),
+    metric = recode(
+      metric,
+      mae_all_five_pct_points =
+        "MAE across all five species (percentage points)",
+      bray_curtis_similarity =
+        "Bray-Curtis similarity"
+    )
+  )
+
+known_mixture_thresholds <- tibble(
+  metric = c(
+    "MAE across all five species (percentage points)",
+    "Bray-Curtis similarity"
+  ),
+  threshold = c(10, 0.80)
+)
+
+validation_status_colors <- c(
+  "Pass proposed semi-quantitative criteria" = "#009E73",
+  "Review" = "#D55E00"
+)
+
+known_mixture_validation_plot <- ggplot(
+  known_mixture_plot_data,
+  aes(
+    x = display_name,
+    y = metric_value,
+    fill = validation_status
+  )
+) +
+  geom_col(width = 0.72) +
+  geom_hline(
+    data = known_mixture_thresholds,
+    aes(yintercept = threshold),
+    inherit.aes = FALSE,
+    linetype = 2,
+    color = "#404040"
+  ) +
+  geom_text(
+    aes(
+      label = if_else(
+        metric == "Bray-Curtis similarity",
+        number(metric_value, accuracy = 0.001),
+        number(metric_value, accuracy = 0.1)
+      )
+    ),
+    vjust = -0.35,
+    size = 3.3
+  ) +
+  facet_wrap(
+    vars(metric),
+    scales = "free_y",
+    labeller = label_wrap_gen(width = 28)
+  ) +
+  scale_fill_manual(values = validation_status_colors) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.12))) +
+  labs(
+    x = NULL,
+    y = "Metric value",
+    fill = NULL,
+    title = "Known-mixture recovery",
+    subtitle = "Dashed lines show proposed study-specific criteria"
+  ) +
+  theme_16s +
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1),
+    strip.text = element_text(face = "bold")
+  )
+
+known_mixture_validation_plot
+```
+
+```{r save-known-mixture-validation}
+write_tsv(
+  known_mixture_validation,
+  file.path(table_dir, "known_mixture_validation_stats.tsv")
+)
+write_tsv(
+  known_mixture_overall_stats,
+  file.path(table_dir, "known_mixture_overall_stats.tsv")
+)
+
+ggsave(
+  file.path(figure_dir, "known_mixture_validation_stats.png"),
+  known_mixture_validation_plot,
+  width = 11,
+  height = 5.5,
+  dpi = 300
+)
+ggsave(
+  file.path(figure_dir, "known_mixture_validation_stats.pdf"),
+  known_mixture_validation_plot,
+  width = 11,
+  height = 5.5
+)
+```
+
+# 9. Percentage of reads assigned by custom versus broad Emu
+
+Here, custom Emu assignment means the percentage of QC-passing reads assigned
+to one of the five custom references. Broad Emu assignment means the
+percentage receiving any taxonomic assignment in the published database. The
+table also retains the percentage that broad Emu assigned to the five exact
+expected species.
+
+## Calculate assignment percentages
+
+```{r prepare-emu-assignment-rate}
+custom_assignment_rate <- custom_raw %>%
+  filter(sample_id %in% selected_sample_ids) %>%
+  group_by(sample_id) %>%
+  summarise(
+    custom_five_reference_assigned_pct =
+      sum(emu_abundance_pct_all_usable_reads),
+    .groups = "drop"
+  )
+
+broad_assignment_rate <- broad_accounting_raw %>%
+  filter(sample_id %in% selected_sample_ids) %>%
+  transmute(
+    sample_id,
+    broad_any_taxon_assigned_pct =
+      100 * emu_classified_estimated_reads / usable_reads,
+    broad_five_exact_species_assigned_pct =
+      100 * expected_species_estimated_reads / usable_reads
+  )
+
+emu_assignment_rate_table <- custom_assignment_rate %>%
+  inner_join(broad_assignment_rate, by = "sample_id") %>%
+  left_join(sample_key, by = "sample_id") %>%
+  mutate(
+    display_name = factor(display_name, levels = selected_sample_names),
+    broad_minus_custom_pct_points =
+      broad_any_taxon_assigned_pct -
+      custom_five_reference_assigned_pct
+  ) %>%
+  arrange(display_order)
+
+kable(
+  emu_assignment_rate_table %>%
+    select(
+      display_name,
+      custom_five_reference_assigned_pct,
+      broad_any_taxon_assigned_pct,
+      broad_five_exact_species_assigned_pct,
+      broad_minus_custom_pct_points
+    ),
+  digits = 3,
+  caption = "Custom and broad Emu assignment percentages"
+)
+```
+
+## Summarize assignment rates
+
+```{r summarize-emu-assignment-rate}
+emu_assignment_rate_long <- emu_assignment_rate_table %>%
+  select(
+    sample_id,
+    display_name,
+    display_order,
+    custom_five_reference_assigned_pct,
+    broad_any_taxon_assigned_pct
+  ) %>%
+  pivot_longer(
+    cols = c(
+      custom_five_reference_assigned_pct,
+      broad_any_taxon_assigned_pct
+    ),
+    names_to = "method",
+    values_to = "assigned_pct"
+  ) %>%
+  mutate(
+    method = recode(
+      method,
+      custom_five_reference_assigned_pct =
+        "Custom Emu: five references",
+      broad_any_taxon_assigned_pct =
+        "Broad Emu: any classified taxon"
+    ),
+    method = factor(method, levels = names(assignment_method_colors))
+  )
+
+emu_assignment_method_stats <- emu_assignment_rate_long %>%
+  group_by(method) %>%
+  summarise(
+    samples = n(),
+    mean_assigned_pct = mean(assigned_pct),
+    median_assigned_pct = median(assigned_pct),
+    sd_assigned_pct = sd(assigned_pct),
+    minimum_assigned_pct = min(assigned_pct),
+    maximum_assigned_pct = max(assigned_pct),
+    .groups = "drop"
+  )
+
+emu_assignment_paired_stats <- emu_assignment_rate_table %>%
+  summarise(
+    mean_broad_minus_custom_pct_points =
+      mean(broad_minus_custom_pct_points),
+    median_broad_minus_custom_pct_points =
+      median(broad_minus_custom_pct_points),
+    minimum_broad_minus_custom_pct_points =
+      min(broad_minus_custom_pct_points),
+    maximum_broad_minus_custom_pct_points =
+      max(broad_minus_custom_pct_points)
+  )
+
+kable(
+  emu_assignment_method_stats,
+  digits = 3,
+  caption = "Distribution of Emu assignment rates across selected samples"
+)
+
+kable(
+  emu_assignment_paired_stats,
+  digits = 3,
+  caption = "Paired broad-minus-custom assignment difference"
+)
+```
+
+## Draw the custom-versus-broad assignment graph
+
+The point scale is zoomed because both methods assign most QC-passing reads.
+The graph uses points rather than bars so the nonzero baseline does not imply
+that the assigned fractions start at zero.
+
+```{r plot-emu-assignment-rate, fig.width=12, fig.height=5.5}
+assignment_y_min <- max(
+  0,
+  2 * floor(
+    (min(emu_assignment_rate_long$assigned_pct) - 1) / 2
+  )
+)
+
+emu_assignment_rate_plot <- ggplot(
+  emu_assignment_rate_table,
+  aes(x = display_name)
+) +
+  geom_segment(
+    aes(
+      xend = display_name,
+      y = custom_five_reference_assigned_pct,
+      yend = broad_any_taxon_assigned_pct
+    ),
+    color = "#B0B0B0",
+    linewidth = 0.6
+  ) +
+  geom_point(
+    aes(
+      y = custom_five_reference_assigned_pct,
+      color = "Custom Emu: five references"
+    ),
+    size = 2.8
+  ) +
+  geom_point(
+    aes(
+      y = broad_any_taxon_assigned_pct,
+      color = "Broad Emu: any classified taxon"
+    ),
+    size = 2.8
+  ) +
+  scale_color_manual(values = assignment_method_colors, drop = FALSE) +
+  scale_y_continuous(
+    breaks = pretty_breaks(n = 6),
+    labels = label_number(suffix = "%")
+  ) +
+  coord_cartesian(ylim = c(assignment_y_min, 100)) +
+  labs(
+    x = NULL,
+    y = "QC-passing reads assigned",
+    color = NULL,
+    title = "Read assignment: custom versus broad Emu",
+    subtitle = "Gray lines connect the two database results for each sample"
+  ) +
+  theme_16s
+
+emu_assignment_rate_plot
+```
+
+```{r save-emu-assignment-rate}
+write_tsv(
+  emu_assignment_rate_table %>%
+    mutate(display_name = as.character(display_name)),
+  file.path(table_dir, "custom_vs_broad_emu_assignment_rates.tsv")
+)
+write_tsv(
+  emu_assignment_method_stats,
+  file.path(table_dir, "custom_vs_broad_emu_assignment_summary_stats.tsv")
+)
+
+ggsave(
+  file.path(figure_dir, "custom_vs_broad_emu_assignment_rates.png"),
+  emu_assignment_rate_plot,
+  width = 12,
+  height = 5.5,
+  dpi = 300
+)
+ggsave(
+  file.path(figure_dir, "custom_vs_broad_emu_assignment_rates.pdf"),
+  emu_assignment_rate_plot,
+  width = 12,
+  height = 5.5
+)
+```
+
+# 10. Minimap2 read-level cross-check
+
+Minimap2 classifies each filtered read as `confident`, `ambiguous`, or
+`unassigned`. A confident read passes the configured alignment-length,
+coverage, identity, mapping-quality, and best-versus-second-score thresholds.
+Ambiguous reads have two closely scoring reference alignments and are not
+forced onto one species.
+
+## Prepare minimap2 read-status data
+
+```{r prepare-minimap-status}
+minimap_status_table <- minimap_status_raw %>%
+  filter(sample_id %in% selected_sample_ids) %>%
+  left_join(sample_key, by = "sample_id") %>%
+  mutate(display_name = factor(display_name, levels = selected_sample_names)) %>%
+  arrange(display_order)
+
+minimap_status_long <- minimap_status_table %>%
+  select(
+    sample_id,
+    display_name,
+    display_order,
+    confident_pct,
+    ambiguous_pct,
+    unassigned_pct
+  ) %>%
+  pivot_longer(
+    cols = ends_with("_pct"),
+    names_to = "assignment_status",
+    values_to = "read_pct"
+  ) %>%
+  mutate(
+    assignment_status = recode(
+      assignment_status,
+      confident_pct = "Confident",
+      ambiguous_pct = "Ambiguous",
+      unassigned_pct = "Unassigned"
+    ),
+    assignment_status = factor(
+      assignment_status,
+      levels = names(minimap_status_colors)
+    )
+  )
+
+kable(
+  minimap_status_table %>%
+    select(
+      display_name,
+      total_reads,
+      confident_reads,
+      ambiguous_reads,
+      unassigned_reads,
+      confident_pct,
+      ambiguous_pct,
+      unassigned_pct
+    ),
+  digits = 3,
+  caption = "Minimap2 read-status results"
+)
+```
+
+## Display overall and across-sample minimap2 statistics
+
+```{r summarize-minimap-status}
+minimap_weighted_stats <- minimap_status_table %>%
+  summarise(
+    selected_samples = n(),
+    total_reads = sum(total_reads),
+    confident_reads = sum(confident_reads),
+    ambiguous_reads = sum(ambiguous_reads),
+    unassigned_reads = sum(unassigned_reads),
+    confident_pct = 100 * confident_reads / total_reads,
+    ambiguous_pct = 100 * ambiguous_reads / total_reads,
+    unassigned_pct = 100 * unassigned_reads / total_reads
+  )
+
+minimap_status_distribution_stats <- minimap_status_long %>%
+  group_by(assignment_status) %>%
+  summarise(
+    mean_pct = mean(read_pct),
+    median_pct = median(read_pct),
+    sd_pct = sd(read_pct),
+    minimum_pct = min(read_pct),
+    maximum_pct = max(read_pct),
+    .groups = "drop"
+  )
+
+kable(
+  minimap_weighted_stats,
+  digits = 3,
+  caption = "Read-weighted minimap2 statistics across selected samples"
+)
+
+kable(
+  minimap_status_distribution_stats,
+  digits = 3,
+  caption = "Distribution of minimap2 percentages across samples"
+)
+```
+
+## Draw per-sample minimap2 status plots
+
+Each panel has its own y-axis range so the small ambiguous fraction remains
+visible.
+
+```{r plot-minimap-status, fig.width=12, fig.height=8}
+minimap_status_plot <- ggplot(
+  minimap_status_long,
+  aes(x = display_name, y = read_pct, fill = assignment_status)
+) +
+  geom_col(width = 0.78) +
+  facet_wrap(
+    vars(assignment_status),
+    ncol = 1,
+    scales = "free_y"
+  ) +
+  scale_fill_manual(values = minimap_status_colors, drop = FALSE) +
+  scale_y_continuous(
+    labels = label_number(suffix = "%"),
+    expand = expansion(mult = c(0, 0.08))
+  ) +
+  labs(
+    x = NULL,
+    y = "Filtered reads",
+    fill = NULL,
+    title = "Minimap2 read-level assignment status",
+    subtitle = "Independent alignment against the five custom references"
+  ) +
+  theme_16s +
+  theme(legend.position = "none")
+
+minimap_status_plot
+```
+
+```{r save-minimap-status}
+write_tsv(
+  minimap_status_table %>%
+    mutate(display_name = as.character(display_name)),
+  file.path(table_dir, "minimap2_status_selected_samples.tsv")
+)
+write_tsv(
+  minimap_weighted_stats,
+  file.path(table_dir, "minimap2_weighted_status_stats.tsv")
+)
+write_tsv(
+  minimap_status_distribution_stats,
+  file.path(table_dir, "minimap2_status_distribution_stats.tsv")
+)
+
+ggsave(
+  file.path(figure_dir, "minimap2_read_status_selected_samples.png"),
+  minimap_status_plot,
+  width = 12,
+  height = 8,
+  dpi = 300
+)
+ggsave(
+  file.path(figure_dir, "minimap2_read_status_selected_samples.pdf"),
+  minimap_status_plot,
+  width = 12,
+  height = 8
+)
+```
+
+## Compare custom Emu with confident minimap2 assignments
+
+Both percentages in this comparison are renormalized among the five expected
+species. Minimap2 uses only reads classified as confident.
+
+```{r prepare-custom-minimap-comparison}
+minimap_composition <- minimap_confident_raw %>%
+  filter(sample_id %in% selected_sample_ids) %>%
+  transmute(
+    sample_id,
+    species = reference %>%
+      str_remove("_ref$") %>%
+      str_replace_all("_", " "),
+    minimap_pct = percentage_among_confident_reads
+  ) %>%
+  complete(
+    sample_id = selected_sample_ids,
+    species = species_order,
+    fill = list(minimap_pct = 0)
+  )
+
+custom_minimap_comparison <- custom_plot_data %>%
+  transmute(
+    sample_id,
+    display_name = as.character(display_name),
+    display_order,
+    species = as.character(species),
+    custom_emu_pct = abundance_pct
+  ) %>%
+  left_join(
+    minimap_composition,
+    by = c("sample_id", "species")
+  ) %>%
+  mutate(
+    difference_pct_points = minimap_pct - custom_emu_pct,
+    absolute_difference_pct_points = abs(difference_pct_points)
+  )
+
+agreement_stats <- function(data, scope_label) {
+  data %>%
+    summarise(
+      comparison_cells = n(),
+      mean_absolute_error_pct_points =
+        mean(absolute_difference_pct_points),
+      root_mean_squared_error =
+        sqrt(mean(difference_pct_points^2)),
+      pearson_correlation =
+        cor(custom_emu_pct, minimap_pct, method = "pearson"),
+      spearman_correlation =
+        cor(custom_emu_pct, minimap_pct, method = "spearman"),
+      maximum_absolute_difference_pct_points =
+        max(absolute_difference_pct_points)
+    ) %>%
+    mutate(comparison_scope = scope_label, .before = 1)
+}
+
+custom_minimap_agreement_stats <- bind_rows(
+  agreement_stats(
+    custom_minimap_comparison,
+    "All five species in all selected samples"
+  ),
+  agreement_stats(
+    custom_minimap_comparison %>%
+      filter(custom_emu_pct > 0 | minimap_pct > 0),
+    "Species detected by either method"
+  )
+)
+
+custom_minimap_sample_stats <- custom_minimap_comparison %>%
+  group_by(sample_id, display_name, display_order) %>%
+  summarise(
+    mean_absolute_error_pct_points =
+      mean(absolute_difference_pct_points),
+    maximum_absolute_difference_pct_points =
+      max(absolute_difference_pct_points),
+    .groups = "drop"
+  ) %>%
+  arrange(display_order)
+
+kable(
+  custom_minimap_agreement_stats,
+  digits = 4,
+  caption = "Custom Emu versus minimap2 agreement statistics"
+)
+
+kable(
+  custom_minimap_sample_stats %>% select(-display_order),
+  digits = 3,
+  caption = "Per-sample custom Emu versus minimap2 differences"
+)
+```
+
+## Draw custom Emu versus minimap2 agreement
+
+```{r plot-custom-minimap-comparison, fig.width=11, fig.height=7}
+custom_minimap_plot <- ggplot(
+  custom_minimap_comparison,
+  aes(
+    x = custom_emu_pct,
+    y = minimap_pct,
+    color = species
+  )
+) +
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = 2,
+    color = "#606060"
+  ) +
+  geom_point(size = 2.3, alpha = 0.8) +
+  facet_wrap(
+    vars(species),
+    labeller = label_wrap_gen(width = 24)
+  ) +
+  scale_color_manual(values = species_colors[species_order], drop = FALSE) +
+  scale_x_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 20),
+    labels = label_number(suffix = "%")
+  ) +
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 20),
+    labels = label_number(suffix = "%")
+  ) +
+  coord_equal() +
+  labs(
+    x = "Custom Emu composition",
+    y = "Confident minimap2 composition",
+    color = NULL,
+    title = "Custom Emu versus minimap2",
+    subtitle = "Dashed line indicates exact agreement"
+  ) +
+  theme_16s +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    legend.position = "none",
+    strip.text = element_text(face = "bold")
+  )
+
+custom_minimap_plot
+```
+
+```{r save-custom-minimap-comparison}
+write_tsv(
+  custom_minimap_comparison,
+  file.path(table_dir, "custom_emu_vs_minimap2_selected_samples.tsv")
+)
+write_tsv(
+  custom_minimap_agreement_stats,
+  file.path(table_dir, "custom_emu_vs_minimap2_agreement_stats.tsv")
+)
+write_tsv(
+  custom_minimap_sample_stats,
+  file.path(table_dir, "custom_emu_vs_minimap2_per_sample_stats.tsv")
+)
+
+ggsave(
+  file.path(figure_dir, "custom_emu_vs_minimap2_selected_samples.png"),
+  custom_minimap_plot,
+  width = 11,
+  height = 7,
+  dpi = 300
+)
+ggsave(
+  file.path(figure_dir, "custom_emu_vs_minimap2_selected_samples.pdf"),
+  custom_minimap_plot,
+  width = 11,
+  height = 7
+)
+```
+
+# 11. Optional: inspect specific broad Emu unexpected taxa
+
+This table identifies the taxa behind the assigned portion of
+`Unknown / other`. Technical categories such as unmapped and
+alignment-filtered reads are not species and are shown separately in Section 6.
+
+```{r inspect-unexpected-taxa}
+broad_unexpected_taxa <- broad_species_raw %>%
+  filter(
+    sample_id %in% selected_sample_ids,
+    !species %in% species_order
+  ) %>%
+  left_join(sample_key, by = "sample_id") %>%
+  select(
+    display_order,
+    display_name,
+    tax_id,
+    species,
+    genus,
+    abundance_pct_all_usable_reads,
+    estimated_counts
+  ) %>%
+  arrange(display_order, desc(abundance_pct_all_usable_reads))
+
+kable(
+  broad_unexpected_taxa %>% select(-display_order),
+  digits = 3,
+  caption = "Unexpected species assigned by broad Emu"
+)
+```
+
+# 12. P1-normalized organism trajectories
+
+This section follows the five expected organisms through P1, P3, P5, P7, and
+P9 using custom Emu abundance among **all QC-passing reads**. Two baseline
+transformations are shown:
+
+For this longitudinal analysis, P1 is sample 16 collected at 48 hours because
+that culture was used for passaging. Sample 1 was collected at 24 hours and is
+not used as the passage baseline. Its results remain in the project and in
+other applicable cross-sectional plots.
+
+Sample 16 had an atypical raw read-length distribution (raw median 1,060 bp).
+After the standard 1,200--1,800 bp and Q10 filters, 1,977 reads remained with
+a median length of 1,496 bp. Its use here is therefore documented explicitly
+rather than treated as an interchangeable replacement based only on read
+count.
+
+1. **Change from P1 in percentage points** equals the abundance at each point
+   minus its P1 abundance. P1 is therefore zero for every organism. This is the
+   primary view because it remains defined when an organism was absent at P1.
+2. **P1-normalized index** equals `100 * abundance / P1 abundance`. P1 equals
+   100, 200 means twice the P1 relative abundance, and 50 means half the P1
+   relative abundance. It is undefined when P1 abundance is zero.
+
+These remain compositional measurements. They show how each organism's share
+of the sequenced community changed; they do not demonstrate absolute growth or
+decline without an independent total-load measurement such as total CFU,
+16S-qPCR, or spike-in-normalized abundance.
+
+## Define the P1-P9 series
+
+```{r define-p1-p9-series}
+trajectory_key_file <- path(
+  "metadata",
+  "longitudinal_trajectory_samples.tsv"
+)
+if (!file.exists(trajectory_key_file)) {
+  stop("Missing longitudinal trajectory metadata: ", trajectory_key_file)
+}
+
+trajectory_key <- read_tsv(
+  trajectory_key_file,
+  show_col_types = FALSE
+) %>%
+  arrange(trajectory_order)
+
+if (anyDuplicated(trajectory_key$sample_id)) {
+  stop("Duplicate sample IDs in longitudinal trajectory metadata")
+}
+if (anyDuplicated(trajectory_key$trajectory_point)) {
+  stop("Duplicate trajectory points in longitudinal trajectory metadata")
+}
+if (!identical(trajectory_key$trajectory_point, c("P1", "P3", "P5", "P7", "P9"))) {
+  stop("Longitudinal trajectory points must be ordered P1, P3, P5, P7, P9")
+}
+
+trajectory_custom_raw <- custom_raw %>%
+  select(
+    sample_id,
+    species,
+    emu_abundance_pct_renormalized_among_expected,
+    emu_abundance_pct_all_usable_reads,
+    estimated_counts
+  )
+
+missing_trajectory_samples <- setdiff(
+  trajectory_key$sample_id,
+  unique(trajectory_custom_raw$sample_id)
+)
+
+if (length(missing_trajectory_samples) > 0) {
+  stop(
+    "P1-P9 sample(s) missing from custom Emu results: ",
+    paste(missing_trajectory_samples, collapse = ", ")
+  )
+}
+
+kable(
+  trajectory_key,
+  caption = "Samples used for the P1-P9 passage trajectory"
+)
+```
+
+## Passage-only custom Emu composition
+
+This graph contains only the longitudinal passage series. Percentages are
+renormalized among reads assigned to the five expected species, so every bar
+sums to 100%. Use the P1-centered graphs below to inspect organism-specific
+changes while retaining the all-usable-read denominator.
+
+```{r prepare-passage-only-stacked}
+passage_custom_plot_data <- trajectory_custom_raw %>%
+  filter(sample_id %in% trajectory_key$sample_id) %>%
+  select(
+    sample_id,
+    species,
+    abundance_pct =
+      emu_abundance_pct_renormalized_among_expected
+  ) %>%
+  complete(
+    sample_id = trajectory_key$sample_id,
+    species = species_order,
+    fill = list(abundance_pct = 0)
+  ) %>%
+  left_join(trajectory_key, by = "sample_id") %>%
+  mutate(
+    trajectory_point = factor(
+      trajectory_point,
+      levels = trajectory_key$trajectory_point
+    ),
+    species = factor(species, levels = species_order)
+  ) %>%
+  arrange(trajectory_order, species)
+
+kable(
+  passage_custom_plot_data %>%
+    mutate(
+      trajectory_point = as.character(trajectory_point),
+      species = as.character(species)
+    ) %>%
+    select(trajectory_point, species, abundance_pct),
+  digits = 3,
+  caption = "Custom Emu composition for the passage-only series"
+)
+```
+
+```{r plot-passage-only-stacked, fig.width=9, fig.height=5.5}
+passage_custom_stacked_plot <- ggplot(
+  passage_custom_plot_data,
+  aes(
+    x = trajectory_point,
+    y = abundance_pct,
+    fill = species
+  )
+) +
+  geom_col(width = 0.78, color = "white", linewidth = 0.2) +
+  scale_fill_manual(
+    values = species_colors[species_order],
+    drop = FALSE
+  ) +
+  guides(
+    fill = guide_legend(nrow = 2, byrow = TRUE)
+  ) +
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 20),
+    labels = label_number(suffix = "%"),
+    expand = expansion(mult = c(0, 0))
+  ) +
+  coord_cartesian(ylim = c(0, 100)) +
+  labs(
+    x = "Passage",
+    y = "Abundance among five expected species",
+    fill = NULL,
+    title = "Community composition across passages",
+    subtitle = "Custom five-reference Emu; P1 is the 48h passage baseline"
+  ) +
+  theme_16s +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    legend.box = "vertical"
+  )
+
+passage_custom_stacked_plot
+```
+
+```{r save-passage-only-stacked}
+write_tsv(
+  passage_custom_plot_data %>%
+    mutate(
+      trajectory_point = as.character(trajectory_point),
+      species = as.character(species)
+    ),
+  file.path(table_dir, "passage_only_custom_emu_stacked_plot_data.tsv")
+)
+
+ggsave(
+  file.path(figure_dir, "passage_only_custom_emu_stacked.png"),
+  passage_custom_stacked_plot,
+  width = 9,
+  height = 5.5,
+  dpi = 300
+)
+ggsave(
+  file.path(figure_dir, "passage_only_custom_emu_stacked.pdf"),
+  passage_custom_stacked_plot,
+  width = 9,
+  height = 5.5
+)
+```
+
+## Calculate P1-centered changes and indices
+
+```{r prepare-p1-normalized-trajectories}
+trajectory_abundance <- trajectory_custom_raw %>%
+  filter(sample_id %in% trajectory_key$sample_id) %>%
+  select(
+    sample_id,
+    species,
+    abundance_pct_all_usable_reads =
+      emu_abundance_pct_all_usable_reads,
+    estimated_counts
+  ) %>%
+  complete(
+    sample_id = trajectory_key$sample_id,
+    species = species_order,
+    fill = list(
+      abundance_pct_all_usable_reads = 0,
+      estimated_counts = 0
+    )
+  ) %>%
+  left_join(trajectory_key, by = "sample_id")
+
+p1_baseline <- trajectory_abundance %>%
+  filter(trajectory_point == "P1") %>%
+  transmute(
+    species,
+    p1_abundance_pct = abundance_pct_all_usable_reads,
+    p1_estimated_counts = estimated_counts,
+    p1_baseline_support = case_when(
+      p1_estimated_counts >= 10 ~
+        "Supported: at least 10 estimated P1 reads",
+      p1_estimated_counts > 0 ~
+        "Low support: fewer than 10 estimated P1 reads",
+      TRUE ~
+        "Not detected at P1: fold index undefined"
+    )
+  )
+
+trajectory_normalized <- trajectory_abundance %>%
+  left_join(p1_baseline, by = "species") %>%
+  mutate(
+    change_from_p1_pct_points =
+      abundance_pct_all_usable_reads - p1_abundance_pct,
+    p1_normalized_index = if_else(
+      p1_abundance_pct > 0,
+      100 * abundance_pct_all_usable_reads / p1_abundance_pct,
+      NA_real_
+    ),
+    species = factor(species, levels = species_order),
+    trajectory_point = factor(
+      trajectory_point,
+      levels = trajectory_key$trajectory_point
+    )
+  ) %>%
+  arrange(species, trajectory_order)
+
+p1_usable_reads <- sample16_custom_total_reads
+
+kable(
+  p1_baseline %>%
+    mutate(p1_total_usable_reads = p1_usable_reads) %>%
+    select(
+      species,
+      p1_total_usable_reads,
+      p1_estimated_counts,
+      p1_abundance_pct,
+      p1_baseline_support
+    ),
+  digits = 3,
+  caption = "P1 baseline support for fold-change interpretation"
+)
+```
+
+## Inspect the normalized trajectory table
+
+```{r display-p1-normalized-trajectories}
+kable(
+  trajectory_normalized %>%
+    mutate(species = as.character(species)) %>%
+    select(
+      trajectory_point,
+      species,
+      abundance_pct_all_usable_reads,
+      change_from_p1_pct_points,
+      p1_normalized_index,
+      p1_estimated_counts,
+      p1_baseline_support
+    ),
+  digits = 3,
+  caption = "P1-normalized organism trajectories"
+)
+```
+
+## Draw change from P1 for every organism
+
+The panels use different y-axis ranges so changes in low-abundance organisms
+remain visible. Compare numerical values, rather than bar or panel height,
+when comparing the magnitude of change between organisms.
+
+```{r plot-change-from-p1, fig.width=11, fig.height=7}
+change_from_p1_plot <- ggplot(
+  trajectory_normalized,
+  aes(
+    x = trajectory_order,
+    y = change_from_p1_pct_points,
+    color = species,
+    group = species
+  )
+) +
+  geom_hline(
+    yintercept = 0,
+    linetype = 2,
+    color = "#606060"
+  ) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 2.8) +
+  facet_wrap(
+    vars(species),
+    scales = "free_y",
+    labeller = label_wrap_gen(width = 24)
+  ) +
+  scale_color_manual(values = species_colors[species_order], drop = FALSE) +
+  scale_x_continuous(
+    breaks = trajectory_key$trajectory_order,
+    labels = trajectory_key$trajectory_point
+  ) +
+  scale_y_continuous(
+    labels = label_number(suffix = " pp"),
+    expand = expansion(mult = c(0.12, 0.12))
+  ) +
+  labs(
+    x = "Sampling point",
+    y = "Change from P1",
+    color = NULL,
+    title = "Organism trajectories centered on P1",
+    subtitle = "Custom Emu abundance among all QC-passing reads"
+  ) +
+  theme_16s +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    legend.position = "none",
+    strip.text = element_text(face = "bold")
+  )
+
+change_from_p1_plot
+```
+
+## Draw the P1-normalized index
+
+An organism with zero estimated P1 reads has an undefined fold index and is
+annotated in its panel. Interpret large indices cautiously whenever the P1
+baseline has low read support.
+
+```{r plot-p1-normalized-index, fig.width=11, fig.height=9}
+p1_index_annotation <- p1_baseline %>%
+  filter(p1_abundance_pct == 0) %>%
+  transmute(
+    species = factor(species, levels = species_order),
+    trajectory_order = 5,
+    p1_normalized_index = 100,
+    label = "P1 = 0 reads\nfold index undefined"
+  )
+
+p1_normalized_index_plot <- ggplot(
+  trajectory_normalized,
+  aes(
+    x = trajectory_order,
+    y = p1_normalized_index,
+    color = species,
+    group = species
+  )
+) +
+  geom_hline(
+    yintercept = 100,
+    linetype = 2,
+    color = "#606060"
+  ) +
+  geom_line(linewidth = 0.8, na.rm = TRUE) +
+  geom_point(size = 2.8, na.rm = TRUE) +
+  geom_text(
+    data = p1_index_annotation,
+    aes(
+      x = trajectory_order,
+      y = p1_normalized_index,
+      label = label
+    ),
+    inherit.aes = FALSE,
+    size = 3.4
+  ) +
+  facet_wrap(
+    vars(species),
+    ncol = 2,
+    scales = "free_y",
+    drop = FALSE,
+    labeller = label_wrap_gen(width = 24)
+  ) +
+  scale_color_manual(values = species_colors[species_order], drop = FALSE) +
+  scale_x_continuous(
+    breaks = trajectory_key$trajectory_order,
+    labels = trajectory_key$trajectory_point
+  ) +
+  scale_y_continuous(
+    labels = label_number(),
+    expand = expansion(mult = c(0.12, 0.15))
+  ) +
+  labs(
+    x = "Sampling point",
+    y = "Relative-composition index (not reads)",
+    color = NULL,
+    title = "Relative composition indexed to P1 = 100",
+    subtitle = "P1 = 100 is a ratio baseline; it is not a read count"
+  ) +
+  theme_16s +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    legend.position = "none",
+    strip.text = element_text(face = "bold")
+  )
+
+p1_normalized_index_plot
+```
+
+```{r save-p1-normalized-trajectories}
+write_tsv(
+  trajectory_normalized %>%
+    mutate(
+      species = as.character(species),
+      trajectory_point = as.character(trajectory_point)
+    ),
+  file.path(table_dir, "p1_normalized_organism_trajectories.tsv")
+)
+write_tsv(
+  p1_baseline,
+  file.path(table_dir, "p1_baseline_support.tsv")
+)
+
+ggsave(
+  file.path(figure_dir, "organism_change_from_p1.png"),
+  change_from_p1_plot,
+  width = 11,
+  height = 7,
+  dpi = 300
+)
+ggsave(
+  file.path(figure_dir, "organism_change_from_p1.pdf"),
+  change_from_p1_plot,
+  width = 11,
+  height = 7
+)
+ggsave(
+  file.path(figure_dir, "organism_p1_normalized_index.png"),
+  p1_normalized_index_plot,
+  width = 11,
+  height = 9,
+  dpi = 300
+)
+ggsave(
+  file.path(figure_dir, "organism_p1_normalized_index.pdf"),
+  p1_normalized_index_plot,
+  width = 11,
+  height = 9
+)
+```
+
+# 13. P5 to P6 frozen-stock branch
+
+This section tracks the three organisms detected across P5, the P6 frozen
+stock, and the two cultures started from that stock. The two branch lines
+share P5 and the frozen-stock measurement, then separate at `P6_p1_24` and
+`P6_p1_48`.
+
+The plotted value is change from P5 in **percentage points**, calculated from
+custom Emu abundance among all QC-passing reads. This is a relative-composition
+measurement, not absolute growth. The accompanying table retains the observed
+percentages and estimated read counts.
+
+## Define the branch and calculate change from P5
+
+```{r prepare-p5-p6-branch}
+p6_branch_species <- c(
+  "Bacteroides thetaiotaomicron",
+  "Fusobacterium nucleatum",
+  "Veillonella parvula"
+)
+
+p6_branch_key <- tribble(
+  ~sample_id,              ~branch_stage,       ~stage_order, ~branch_endpoint,
+  "2PJGZM_18_sample_18",   "P5",                           1, "P6_p1_24",
+  "2PJGZM_10_sample_10",   "P6 frozen stock",              2, "P6_p1_24",
+  "2PJGZM_8_sample_8",     "P6_p1_24",                     3, "P6_p1_24",
+  "2PJGZM_18_sample_18",   "P5",                           1, "P6_p1_48",
+  "2PJGZM_10_sample_10",   "P6 frozen stock",              2, "P6_p1_48",
+  "2PJGZM_3_sample_3",     "P6_p1_48",                     3, "P6_p1_48"
+)
+
+missing_p6_branch_samples <- setdiff(
+  unique(p6_branch_key$sample_id),
+  unique(custom_raw$sample_id)
+)
+if (length(missing_p6_branch_samples) > 0) {
+  stop(
+    "P5-P6 branch sample(s) missing from custom Emu results: ",
+    paste(missing_p6_branch_samples, collapse = ", ")
+  )
+}
+
+p5_branch_baseline <- custom_raw %>%
+  filter(
+    sample_id == "2PJGZM_18_sample_18",
+    species %in% p6_branch_species
+  ) %>%
+  transmute(
+    species,
+    p5_abundance_pct = emu_abundance_pct_all_usable_reads,
+    p5_estimated_counts = estimated_counts
+  )
+
+if (
+  nrow(p5_branch_baseline) != length(p6_branch_species) ||
+    any(p5_branch_baseline$p5_estimated_counts <= 0)
+) {
+  stop("P5 does not contain supported baselines for all three branch species")
+}
+
+p6_branch_tracking <- custom_raw %>%
+  filter(
+    sample_id %in% unique(p6_branch_key$sample_id),
+    species %in% p6_branch_species
+  ) %>%
+  select(
+    sample_id,
+    species,
+    abundance_pct_all_usable_reads =
+      emu_abundance_pct_all_usable_reads,
+    estimated_counts
+  ) %>%
+  inner_join(p6_branch_key, by = "sample_id") %>%
+  left_join(p5_branch_baseline, by = "species") %>%
+  mutate(
+    change_from_p5_pct_points =
+      abundance_pct_all_usable_reads - p5_abundance_pct,
+    species = factor(species, levels = p6_branch_species),
+    branch_endpoint = factor(
+      branch_endpoint,
+      levels = c("P6_p1_24", "P6_p1_48")
+    )
+  ) %>%
+  arrange(species, branch_endpoint, stage_order)
+
+p6_branch_display_table <- p6_branch_tracking %>%
+  distinct(
+    sample_id,
+    branch_stage,
+    stage_order,
+    species,
+    abundance_pct_all_usable_reads,
+    estimated_counts,
+    p5_abundance_pct,
+    change_from_p5_pct_points
+  ) %>%
+  arrange(stage_order, species)
+
+kable(
+  p6_branch_display_table %>%
+    select(
+      branch_stage,
+      species,
+      abundance_pct_all_usable_reads,
+      estimated_counts,
+      change_from_p5_pct_points
+    ),
+  digits = 3,
+  caption = "Three-species composition along the P5-P6 branch"
+)
+```
+
+## Draw the shared path and parallel branches
+
+```{r plot-p5-p6-branch, fig.width=10, fig.height=6}
+p6_branch_plot <- ggplot(
+  p6_branch_tracking,
+  aes(
+    x = stage_order,
+    y = change_from_p5_pct_points,
+    color = species,
+    linetype = branch_endpoint,
+    shape = branch_endpoint,
+    group = interaction(species, branch_endpoint)
+  )
+) +
+  geom_hline(
+    yintercept = 0,
+    linetype = 3,
+    color = "#606060"
+  ) +
+  geom_line(linewidth = 1) +
+  geom_point(
+    data = p6_branch_tracking %>%
+      filter(stage_order < 3) %>%
+      distinct(species, stage_order, .keep_all = TRUE),
+    aes(
+      x = stage_order,
+      y = change_from_p5_pct_points,
+      color = species
+    ),
+    inherit.aes = FALSE,
+    shape = 16,
+    size = 3.2
+  ) +
+  geom_point(
+    data = p6_branch_tracking %>%
+      filter(stage_order == 3),
+    size = 3.2,
+    stroke = 0.9
+  ) +
+  scale_color_manual(
+    values = species_colors[p6_branch_species],
+    drop = FALSE
+  ) +
+  scale_linetype_manual(
+    values = c(
+      "P6_p1_24" = "solid",
+      "P6_p1_48" = "22"
+    ),
+    labels = c(
+      "P6_p1_24" = "Branch to P6_p1_24",
+      "P6_p1_48" = "Branch to P6_p1_48"
+    )
+  ) +
+  scale_shape_manual(
+    values = c(
+      "P6_p1_24" = 16,
+      "P6_p1_48" = 17
+    ),
+    labels = c(
+      "P6_p1_24" = "Branch to P6_p1_24",
+      "P6_p1_48" = "Branch to P6_p1_48"
+    )
+  ) +
+  scale_x_continuous(
+    breaks = c(1, 2, 3),
+    labels = c(
+      "P5",
+      "P6 frozen stock",
+      "P6_p1 endpoints"
+    ),
+    expand = expansion(mult = c(0.06, 0.08))
+  ) +
+  scale_y_continuous(
+    labels = label_number(suffix = " pp"),
+    expand = expansion(mult = c(0.12, 0.12))
+  ) +
+  labs(
+    x = NULL,
+    y = "Change from P5",
+    color = NULL,
+    linetype = NULL,
+    shape = NULL,
+    title = "Three-species change from P5 through the P6 frozen stock",
+    subtitle = paste(
+      "Shared path branches to P6_p1_24 and P6_p1_48;",
+      "custom Emu percentage among all QC-passing reads"
+    )
+  ) +
+  theme_16s +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    legend.box = "vertical"
+  ) +
+  guides(
+    color = guide_legend(order = 1, nrow = 2, byrow = TRUE),
+    linetype = guide_legend(order = 2),
+    shape = guide_legend(order = 2)
+  )
+
+p6_branch_plot
+```
+
+```{r save-p5-p6-branch}
+write_tsv(
+  p6_branch_tracking %>%
+    mutate(
+      species = as.character(species),
+      branch_endpoint = as.character(branch_endpoint)
+    ),
+  file.path(table_dir, "p5_p6_frozen_stock_branch_tracking.tsv")
+)
+
+ggsave(
+  file.path(figure_dir, "p5_p6_frozen_stock_branch.png"),
+  p6_branch_plot,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+ggsave(
+  file.path(figure_dir, "p5_p6_frozen_stock_branch.pdf"),
+  p6_branch_plot,
+  width = 10,
+  height = 6
+)
+```
+
+## Custom Emu composition of the three P6 samples
+
+This stacked graph compares only the P6 frozen stock and the two cultures
+started from it. Percentages are renormalized among reads assigned to the five
+expected species, matching the main custom Emu stacked graph. Cutibacterium
+and Prevotella remain in the fixed species order but have zero-height segments
+in all three samples.
+
+```{r prepare-p6-three-sample-stacked}
+p6_stacked_key <- tribble(
+  ~sample_id,              ~p6_display_name,    ~p6_display_order,
+  "2PJGZM_10_sample_10",   "P6 frozen stock",                   1,
+  "2PJGZM_8_sample_8",     "P6_p1_24",                          2,
+  "2PJGZM_3_sample_3",     "P6_p1_48",                          3
+)
+
+missing_p6_stacked_samples <- setdiff(
+  p6_stacked_key$sample_id,
+  unique(custom_raw$sample_id)
+)
+if (length(missing_p6_stacked_samples) > 0) {
+  stop(
+    "P6 stacked-graph sample(s) missing from custom Emu results: ",
+    paste(missing_p6_stacked_samples, collapse = ", ")
+  )
+}
+
+p6_stacked_plot_data <- custom_raw %>%
+  filter(sample_id %in% p6_stacked_key$sample_id) %>%
+  select(
+    sample_id,
+    species,
+    abundance_pct =
+      emu_abundance_pct_renormalized_among_expected,
+    estimated_counts
+  ) %>%
+  complete(
+    sample_id = p6_stacked_key$sample_id,
+    species = species_order,
+    fill = list(
+      abundance_pct = 0,
+      estimated_counts = 0
+    )
+  ) %>%
+  left_join(p6_stacked_key, by = "sample_id") %>%
+  mutate(
+    p6_display_name = factor(
+      p6_display_name,
+      levels = p6_stacked_key$p6_display_name
+    ),
+    species = factor(species, levels = species_order)
+  ) %>%
+  arrange(p6_display_order, species)
+
+p6_stacked_sum_check <- p6_stacked_plot_data %>%
+  group_by(sample_id, p6_display_name) %>%
+  summarise(total_pct = sum(abundance_pct), .groups = "drop")
+
+kable(
+  p6_stacked_plot_data %>%
+    mutate(
+      p6_display_name = as.character(p6_display_name),
+      species = as.character(species)
+    ) %>%
+    select(
+      p6_display_name,
+      species,
+      abundance_pct,
+      estimated_counts
+    ),
+  digits = 3,
+  caption = "Custom Emu composition of the three P6 samples"
+)
+
+kable(
+  p6_stacked_sum_check,
+  digits = 3,
+  caption = "P6 custom Emu percentage-sum check"
+)
+```
+
+```{r plot-p6-three-sample-stacked, fig.width=8.5, fig.height=5.5}
+p6_three_sample_stacked_plot <- ggplot(
+  p6_stacked_plot_data,
+  aes(
+    x = p6_display_name,
+    y = abundance_pct,
+    fill = species
+  )
+) +
+  geom_col(width = 0.72, color = "white", linewidth = 0.2) +
+  scale_fill_manual(
+    values = species_colors[species_order],
+    drop = FALSE
+  ) +
+  guides(
+    fill = guide_legend(nrow = 2, byrow = TRUE)
+  ) +
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 20),
+    labels = label_number(suffix = "%"),
+    expand = expansion(mult = c(0, 0))
+  ) +
+  coord_cartesian(ylim = c(0, 100)) +
+  labs(
+    x = NULL,
+    y = "Abundance among five expected species",
+    fill = NULL,
+    title = "Custom Emu composition of the three P6 samples",
+    subtitle = "P6 frozen stock compared with P6_p1_24 and P6_p1_48"
+  ) +
+  theme_16s +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    legend.box = "vertical"
+  )
+
+p6_three_sample_stacked_plot
+```
+
+```{r save-p6-three-sample-stacked}
+write_tsv(
+  p6_stacked_plot_data %>%
+    mutate(
+      p6_display_name = as.character(p6_display_name),
+      species = as.character(species)
+    ),
+  file.path(table_dir, "p6_three_sample_custom_emu_stacked.tsv")
+)
+
+ggsave(
+  file.path(figure_dir, "p6_three_sample_custom_emu_stacked.png"),
+  p6_three_sample_stacked_plot,
+  width = 8.5,
+  height = 5.5,
+  dpi = 300
+)
+ggsave(
+  file.path(figure_dir, "p6_three_sample_custom_emu_stacked.pdf"),
+  p6_three_sample_stacked_plot,
+  width = 8.5,
+  height = 5.5
+)
+```
+
+# 14. R session information
+
+```{r session-information}
+sessionInfo()
+```

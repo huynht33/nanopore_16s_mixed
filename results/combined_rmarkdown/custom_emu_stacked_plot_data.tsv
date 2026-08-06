@@ -1,0 +1,71 @@
+sample_id	species	abundance_pct	sample_number	display_name	display_order
+2PJGZM_16_sample_16	Bacteroides thetaiotaomicron	23.079655901723005	16	P1 (passage baseline)	1
+2PJGZM_16_sample_16	Cutibacterium acnes	0	16	P1 (passage baseline)	1
+2PJGZM_16_sample_16	Fusobacterium nucleatum	1.0220548682087143	16	P1 (passage baseline)	1
+2PJGZM_16_sample_16	Prevotella melaninogenica	36.25527462311661	16	P1 (passage baseline)	1
+2PJGZM_16_sample_16	Veillonella parvula	39.643014606951674	16	P1 (passage baseline)	1
+2PJGZM_3_sample_3	Bacteroides thetaiotaomicron	74.32511677400272	3	P6_p1_48	2
+2PJGZM_3_sample_3	Cutibacterium acnes	0	3	P6_p1_48	2
+2PJGZM_3_sample_3	Fusobacterium nucleatum	9.671727197765192	3	P6_p1_48	2
+2PJGZM_3_sample_3	Prevotella melaninogenica	0	3	P6_p1_48	2
+2PJGZM_3_sample_3	Veillonella parvula	16.003156028232087	3	P6_p1_48	2
+2PJGZM_4_sample_4	Bacteroides thetaiotaomicron	50.171228286361135	4	5 anaerobes ratio 1	3
+2PJGZM_4_sample_4	Cutibacterium acnes	27.91611548350683	4	5 anaerobes ratio 1	3
+2PJGZM_4_sample_4	Fusobacterium nucleatum	9.279161201180546	4	5 anaerobes ratio 1	3
+2PJGZM_4_sample_4	Prevotella melaninogenica	3.485395409949478	4	5 anaerobes ratio 1	3
+2PJGZM_4_sample_4	Veillonella parvula	9.14809961900201	4	5 anaerobes ratio 1	3
+2PJGZM_5_sample_5	Bacteroides thetaiotaomicron	83.59724520695468	5	F:B	4
+2PJGZM_5_sample_5	Cutibacterium acnes	0	5	F:B	4
+2PJGZM_5_sample_5	Fusobacterium nucleatum	16.402754793045318	5	F:B	4
+2PJGZM_5_sample_5	Prevotella melaninogenica	0	5	F:B	4
+2PJGZM_5_sample_5	Veillonella parvula	0	5	F:B	4
+2PJGZM_6_sample_6	Bacteroides thetaiotaomicron	0	6	C:V:P	5
+2PJGZM_6_sample_6	Cutibacterium acnes	66.09911054637865	6	C:V:P	5
+2PJGZM_6_sample_6	Fusobacterium nucleatum	0	6	C:V:P	5
+2PJGZM_6_sample_6	Prevotella melaninogenica	6.632782719186785	6	C:V:P	5
+2PJGZM_6_sample_6	Veillonella parvula	27.26810673443456	6	C:V:P	5
+2PJGZM_7_sample_7	Bacteroides thetaiotaomicron	34.894406732253664	7	5 anaerobes ratio 2	6
+2PJGZM_7_sample_7	Cutibacterium acnes	40.68847325511877	7	5 anaerobes ratio 2	6
+2PJGZM_7_sample_7	Fusobacterium nucleatum	8.864482028155813	7	5 anaerobes ratio 2	6
+2PJGZM_7_sample_7	Prevotella melaninogenica	8.892785281183299	7	5 anaerobes ratio 2	6
+2PJGZM_7_sample_7	Veillonella parvula	6.6598527032884505	7	5 anaerobes ratio 2	6
+2PJGZM_8_sample_8	Bacteroides thetaiotaomicron	81.90625388000363	8	P6_p1_24	7
+2PJGZM_8_sample_8	Cutibacterium acnes	0	8	P6_p1_24	7
+2PJGZM_8_sample_8	Fusobacterium nucleatum	5.204236006051436	8	P6_p1_24	7
+2PJGZM_8_sample_8	Prevotella melaninogenica	0	8	P6_p1_24	7
+2PJGZM_8_sample_8	Veillonella parvula	12.889510113944937	8	P6_p1_24	7
+2PJGZM_9_sample_9	Bacteroides thetaiotaomicron	78.66470601534392	9	P10 stock 24h	8
+2PJGZM_9_sample_9	Cutibacterium acnes	0	9	P10 stock 24h	8
+2PJGZM_9_sample_9	Fusobacterium nucleatum	7.700744295144215	9	P10 stock 24h	8
+2PJGZM_9_sample_9	Prevotella melaninogenica	0	9	P10 stock 24h	8
+2PJGZM_9_sample_9	Veillonella parvula	13.634549689511866	9	P10 stock 24h	8
+2PJGZM_10_sample_10	Bacteroides thetaiotaomicron	78.36242201394803	10	P6 frozen stock	9
+2PJGZM_10_sample_10	Cutibacterium acnes	0	10	P6 frozen stock	9
+2PJGZM_10_sample_10	Fusobacterium nucleatum	3.619096328915482	10	P6 frozen stock	9
+2PJGZM_10_sample_10	Prevotella melaninogenica	0	10	P6 frozen stock	9
+2PJGZM_10_sample_10	Veillonella parvula	18.018481657136476	10	P6 frozen stock	9
+2PJGZM_13_sample_13	Bacteroides thetaiotaomicron	90.81145073810006	13	P10 stock 96h	10
+2PJGZM_13_sample_13	Cutibacterium acnes	0	13	P10 stock 96h	10
+2PJGZM_13_sample_13	Fusobacterium nucleatum	0.8567208271787298	13	P10 stock 96h	10
+2PJGZM_13_sample_13	Prevotella melaninogenica	0	13	P10 stock 96h	10
+2PJGZM_13_sample_13	Veillonella parvula	8.331828434721215	13	P10 stock 96h	10
+2PJGZM_17_sample_17	Bacteroides thetaiotaomicron	84.67549500011911	17	P3_3	11
+2PJGZM_17_sample_17	Cutibacterium acnes	0	17	P3_3	11
+2PJGZM_17_sample_17	Fusobacterium nucleatum	1.4184397163120568	17	P3_3	11
+2PJGZM_17_sample_17	Prevotella melaninogenica	0.6788125801473704	17	P3_3	11
+2PJGZM_17_sample_17	Veillonella parvula	13.227252703421453	17	P3_3	11
+2PJGZM_18_sample_18	Bacteroides thetaiotaomicron	90.8527589259368	18	P5_3	12
+2PJGZM_18_sample_18	Cutibacterium acnes	0	18	P5_3	12
+2PJGZM_18_sample_18	Fusobacterium nucleatum	1.593390380643279	18	P5_3	12
+2PJGZM_18_sample_18	Prevotella melaninogenica	0	18	P5_3	12
+2PJGZM_18_sample_18	Veillonella parvula	7.553850693419912	18	P5_3	12
+2PJGZM_19_sample_19	Bacteroides thetaiotaomicron	89.16225839927426	19	P7_3	13
+2PJGZM_19_sample_19	Cutibacterium acnes	0	19	P7_3	13
+2PJGZM_19_sample_19	Fusobacterium nucleatum	0.9965742759265026	19	P7_3	13
+2PJGZM_19_sample_19	Prevotella melaninogenica	0	19	P7_3	13
+2PJGZM_19_sample_19	Veillonella parvula	9.841167324799228	19	P7_3	13
+2PJGZM_20_sample_20	Bacteroides thetaiotaomicron	84.63552825176737	20	P9 _1	14
+2PJGZM_20_sample_20	Cutibacterium acnes	0	20	P9 _1	14
+2PJGZM_20_sample_20	Fusobacterium nucleatum	1.6069918240766847	20	P9 _1	14
+2PJGZM_20_sample_20	Prevotella melaninogenica	0	20	P9 _1	14
+2PJGZM_20_sample_20	Veillonella parvula	13.75747992415596	20	P9 _1	14

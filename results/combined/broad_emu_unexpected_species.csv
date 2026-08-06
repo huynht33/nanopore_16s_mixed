@@ -1,0 +1,7 @@
+sample_id,tax_id,species,genus,taxon_category,estimated_counts,emu_abundance_pct_among_classified,abundance_pct_all_usable_reads,source_file
+2PJGZM_11_sample_11,1282,Staphylococcus epidermidis,Staphylococcus,unexpected_taxon,45,1.119125,1.102131,results/broad_emu/2PJGZM_11_sample_11/2PJGZM_11_sample_11_rel-abundance.tsv
+2PJGZM_2_sample_2,1282,Staphylococcus epidermidis,Staphylococcus,unexpected_taxon,361.006993,9.287548,9.134792,results/broad_emu/2PJGZM_2_sample_2/2PJGZM_2_sample_2_rel-abundance.tsv
+2PJGZM_4_sample_4,1282,Staphylococcus epidermidis,Staphylococcus,unexpected_taxon,25.000496,0.651903,0.641367,results/broad_emu/2PJGZM_4_sample_4/2PJGZM_4_sample_4_rel-abundance.tsv
+2PJGZM_6_sample_6,1282,Staphylococcus epidermidis,Staphylococcus,unexpected_taxon,63.003018,1.595821,1.571148,results/broad_emu/2PJGZM_6_sample_6/2PJGZM_6_sample_6_rel-abundance.tsv
+2PJGZM_7_sample_7,1282,Staphylococcus epidermidis,Staphylococcus,unexpected_taxon,24,0.74813,0.731039,results/broad_emu/2PJGZM_7_sample_7/2PJGZM_7_sample_7_rel-abundance.tsv
+2PJGZM_9_sample_9,1282,Staphylococcus epidermidis,Staphylococcus,unexpected_taxon,143.697906,3.553361,3.501411,results/broad_emu/2PJGZM_9_sample_9/2PJGZM_9_sample_9_rel-abundance.tsv

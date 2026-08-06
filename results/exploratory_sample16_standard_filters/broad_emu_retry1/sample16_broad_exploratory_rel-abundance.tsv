@@ -1,0 +1,8 @@
+tax_id	abundance	species	genus	family	order	class	phylum	clade	superkingdom	subspecies	species subgroup	species group	estimated counts
+28132	0.36136560905040593	Prevotella melaninogenica	Prevotella	Prevotellaceae	Bacteroidales	Bacteroidia	Bacteroidetes	FCB group	Bacteria				679.3673450147631
+29466	0.3952122463757303	Veillonella parvula	Veillonella	Veillonellaceae	Veillonellales	Negativicutes	Firmicutes	Terrabacteria group	Bacteria				742.999023186373
+818	0.2327838467015234	Bacteroides thetaiotaomicron	Bacteroides	Bacteroidaceae	Bacteroidales	Bacteroidia	Bacteroidetes	FCB group	Bacteria				437.63363179886403
+851	0.010638297872340425	Fusobacterium nucleatum	Fusobacterium	Fusobacteriaceae	Fusobacteriales	Fusobacteriia	Fusobacteria		Bacteria				20.0
+unmapped	0.0												20.0
+mapped_filtered	0.0												77.0
+mapped_unclassified	0.0												0.0

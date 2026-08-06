@@ -1,0 +1,26 @@
+sample_id	species	abundance_pct	trajectory_point	trajectory_order	biological_role	notes
+2PJGZM_16_sample_16	Bacteroides thetaiotaomicron	23.079655901723005	P1	1	Passage baseline	P1 culture sampled at 48 h and used for passaging; retained 1977 reads after the standard 1200-1800 bp and Q10 filters despite an atypical raw read-length distribution
+2PJGZM_16_sample_16	Cutibacterium acnes	0	P1	1	Passage baseline	P1 culture sampled at 48 h and used for passaging; retained 1977 reads after the standard 1200-1800 bp and Q10 filters despite an atypical raw read-length distribution
+2PJGZM_16_sample_16	Fusobacterium nucleatum	1.0220548682087143	P1	1	Passage baseline	P1 culture sampled at 48 h and used for passaging; retained 1977 reads after the standard 1200-1800 bp and Q10 filters despite an atypical raw read-length distribution
+2PJGZM_16_sample_16	Prevotella melaninogenica	36.25527462311661	P1	1	Passage baseline	P1 culture sampled at 48 h and used for passaging; retained 1977 reads after the standard 1200-1800 bp and Q10 filters despite an atypical raw read-length distribution
+2PJGZM_16_sample_16	Veillonella parvula	39.643014606951674	P1	1	Passage baseline	P1 culture sampled at 48 h and used for passaging; retained 1977 reads after the standard 1200-1800 bp and Q10 filters despite an atypical raw read-length distribution
+2PJGZM_17_sample_17	Bacteroides thetaiotaomicron	84.67549500011911	P3	3	Longitudinal sample	Passage 3
+2PJGZM_17_sample_17	Cutibacterium acnes	0	P3	3	Longitudinal sample	Passage 3
+2PJGZM_17_sample_17	Fusobacterium nucleatum	1.4184397163120568	P3	3	Longitudinal sample	Passage 3
+2PJGZM_17_sample_17	Prevotella melaninogenica	0.6788125801473704	P3	3	Longitudinal sample	Passage 3
+2PJGZM_17_sample_17	Veillonella parvula	13.227252703421453	P3	3	Longitudinal sample	Passage 3
+2PJGZM_18_sample_18	Bacteroides thetaiotaomicron	90.8527589259368	P5	5	Longitudinal sample	Passage 5
+2PJGZM_18_sample_18	Cutibacterium acnes	0	P5	5	Longitudinal sample	Passage 5
+2PJGZM_18_sample_18	Fusobacterium nucleatum	1.593390380643279	P5	5	Longitudinal sample	Passage 5
+2PJGZM_18_sample_18	Prevotella melaninogenica	0	P5	5	Longitudinal sample	Passage 5
+2PJGZM_18_sample_18	Veillonella parvula	7.553850693419912	P5	5	Longitudinal sample	Passage 5
+2PJGZM_19_sample_19	Bacteroides thetaiotaomicron	89.16225839927426	P7	7	Longitudinal sample	Passage 7
+2PJGZM_19_sample_19	Cutibacterium acnes	0	P7	7	Longitudinal sample	Passage 7
+2PJGZM_19_sample_19	Fusobacterium nucleatum	0.9965742759265026	P7	7	Longitudinal sample	Passage 7
+2PJGZM_19_sample_19	Prevotella melaninogenica	0	P7	7	Longitudinal sample	Passage 7
+2PJGZM_19_sample_19	Veillonella parvula	9.841167324799228	P7	7	Longitudinal sample	Passage 7
+2PJGZM_20_sample_20	Bacteroides thetaiotaomicron	84.63552825176737	P9	9	Longitudinal sample	Passage 9
+2PJGZM_20_sample_20	Cutibacterium acnes	0	P9	9	Longitudinal sample	Passage 9
+2PJGZM_20_sample_20	Fusobacterium nucleatum	1.6069918240766847	P9	9	Longitudinal sample	Passage 9
+2PJGZM_20_sample_20	Prevotella melaninogenica	0	P9	9	Longitudinal sample	Passage 9
+2PJGZM_20_sample_20	Veillonella parvula	13.75747992415596	P9	9	Longitudinal sample	Passage 9

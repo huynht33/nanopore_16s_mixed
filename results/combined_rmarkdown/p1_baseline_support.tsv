@@ -1,0 +1,6 @@
+species	p1_abundance_pct	p1_estimated_counts	p1_baseline_support
+Bacteroides thetaiotaomicron	21.70211447713863	429.0508032130307	Supported: at least 10 estimated P1 reads
+Cutibacterium acnes	0	0	Not detected at P1: fold index undefined
+Fusobacterium nucleatum	0.9610520991401112	19	Supported: at least 10 estimated P1 reads
+Prevotella melaninogenica	34.09132803458461	673.9855552437377	Supported: at least 10 estimated P1 reads
+Veillonella parvula	37.27686603658228	736.9636415432316	Supported: at least 10 estimated P1 reads

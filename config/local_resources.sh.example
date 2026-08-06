@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+# Copy this file to config/local_resources.sh and edit paths for the machine.
+# The copied file is ignored by Git because resource locations are host-specific.
+
+OLD_PROJECT_ROOT=""
+BROAD_EMU_DB="/absolute/path/to/published_emu_database"
+NCBI_TAXONOMY_DIR=""
+TAXONOMY_LIST=""

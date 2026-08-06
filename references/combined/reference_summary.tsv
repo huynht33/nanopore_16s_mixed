@@ -1,0 +1,6 @@
+reference_id	species	source_filename	sequence_length	gc_percentage	n_bases	md5
+Bacteroides_thetaiotaomicron_ref	Bacteroides thetaiotaomicron	Bacteroides_thetaiotaomicron.fasta	1446	50.346	0	90db2b1310fd47ee90b7cebd069f3f6e
+Cutibacterium_acnes_ref	Cutibacterium acnes	Cutibacterium_acnes.fasta	1442	57.490	0	66ba9f4313a864a6020d9a820b2338bd
+Fusobacterium_nucleatum_ref	Fusobacterium nucleatum	Fusobacterium_nucleatum.fasta	1436	49.373	0	1a698ee14c02aadb36af765bceb2ffb0
+Prevotella_melaninogenica_ref	Prevotella melaninogenica	Prevotella_melaninogenica.fasta	1447	53.697	0	5c892e405e781f5a956b307c59df029d
+Veillonella_parvula_ref	Veillonella parvula	Veillonella_parvula.fasta	1480	53.784	0	805c9af2b0a28192c0c1227d1473fb48

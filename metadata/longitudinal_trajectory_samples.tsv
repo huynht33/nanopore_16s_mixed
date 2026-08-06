@@ -1,0 +1,6 @@
+sample_id	trajectory_point	trajectory_order	biological_role	notes
+2PJGZM_16_sample_16	P1	1	Passage baseline	P1 culture sampled at 48 h and used for passaging; retained 1977 reads after the standard 1200-1800 bp and Q10 filters despite an atypical raw read-length distribution
+2PJGZM_17_sample_17	P3	3	Longitudinal sample	Passage 3
+2PJGZM_18_sample_18	P5	5	Longitudinal sample	Passage 5
+2PJGZM_19_sample_19	P7	7	Longitudinal sample	Passage 7
+2PJGZM_20_sample_20	P9	9	Longitudinal sample	Passage 9
