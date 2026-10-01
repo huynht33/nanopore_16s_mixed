@@ -674,6 +674,81 @@ ggsave(
 )
 ```
 
+## Sample 1 organism percentages
+
+This single-sample graph shows the same targeted custom-Emu composition for
+sample 1 (`P0`) as separate organism bars. Labels are retained for zero and
+low-percentage organisms that are difficult to read in a stacked bar.
+
+```{r prepare-sample1-custom-emu}
+sample1_custom_data <- p0_p1_custom_data %>%
+  filter(as.character(passage) == "P0") %>%
+  transmute(
+    sample_id,
+    passage = as.character(passage),
+    species = as.character(species),
+    abundance_pct,
+    species_plot = factor(species, levels = rev(species_order))
+  )
+
+kable(
+  sample1_custom_data %>%
+    select(sample_id, passage, species, abundance_pct),
+  digits = 3,
+  caption = "Custom Emu organism percentages for sample 1 (P0)"
+)
+```
+
+```{r plot-sample1-custom-emu, fig.width=8, fig.height=5.5}
+sample1_custom_plot <- ggplot(
+  sample1_custom_data,
+  aes(x = abundance_pct, y = species_plot, fill = species)
+) +
+  geom_col(width = 0.7, show.legend = FALSE) +
+  geom_text(
+    aes(label = sprintf("%.2f%%", abundance_pct)),
+    hjust = -0.15,
+    size = 3.8
+  ) +
+  scale_fill_manual(values = species_colors[species_order], drop = FALSE) +
+  scale_x_continuous(
+    breaks = seq(0, 100, by = 20),
+    labels = label_number(suffix = "%"),
+    limits = c(0, 100),
+    expand = expansion(mult = c(0, 0.06))
+  ) +
+  labs(
+    x = "Abundance among five expected species",
+    y = NULL,
+    title = "Sample 1 (P0): custom Emu composition",
+    subtitle = "Relative abundance among reads assigned to the five custom references",
+    caption = "Sample 1 has low sequencing depth; small percentages should be interpreted cautiously."
+  ) +
+  theme_16s +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    axis.text.y = element_text(face = "italic")
+  )
+
+sample1_custom_plot
+```
+
+```{r save-sample1-custom-emu}
+write_tsv(
+  sample1_custom_data %>%
+    select(sample_id, passage, species, abundance_pct),
+  file.path(table_dir, "sample1_p0_custom_emu_percentages.tsv")
+)
+
+ggsave(
+  file.path(figure_dir, "sample1_p0_custom_emu_percentages.png"),
+  sample1_custom_plot,
+  width = 8,
+  height = 5.5,
+  dpi = 300
+)
+```
+
 # 6. Broad Emu: five known species plus unknown/other
 
 This graph uses assignments from the published broad Emu database, not the
