@@ -1,0 +1,11 @@
+sample_id	species	abundance_pct	passage	passage_order
+2PJGZM_1_sample_1	Bacteroides thetaiotaomicron	87.13692946058092	P0	1
+2PJGZM_1_sample_1	Cutibacterium acnes	0.4149377593360996	P0	1
+2PJGZM_1_sample_1	Fusobacterium nucleatum	9.54356846473029	P0	1
+2PJGZM_1_sample_1	Prevotella melaninogenica	0	P0	1
+2PJGZM_1_sample_1	Veillonella parvula	2.904564315352697	P0	1
+2PJGZM_16_sample_16	Bacteroides thetaiotaomicron	23.079655901723005	P1	2
+2PJGZM_16_sample_16	Cutibacterium acnes	0	P1	2
+2PJGZM_16_sample_16	Fusobacterium nucleatum	1.0220548682087143	P1	2
+2PJGZM_16_sample_16	Prevotella melaninogenica	36.25527462311661	P1	2
+2PJGZM_16_sample_16	Veillonella parvula	39.643014606951674	P1	2

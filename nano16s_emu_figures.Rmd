@@ -575,6 +575,105 @@ ggsave(
 )
 ```
 
+## P0 versus P1 custom Emu composition
+
+This focused comparison relabels sample 1 as `P0` and sample 16 as `P1`.
+Percentages are renormalized among reads assigned to the five expected species,
+as in the main custom-Emu graph. P0 had substantially lower read support and
+was excluded from the current main figures, so its composition should be
+interpreted cautiously.
+
+```{r prepare-p0-p1-custom-emu}
+p0_p1_key <- tribble(
+  ~sample_id, ~passage, ~passage_order,
+  "2PJGZM_1_sample_1", "P0", 1,
+  sample16_id, "P1", 2
+)
+
+missing_p0_p1 <- setdiff(p0_p1_key$sample_id, unique(custom_raw$sample_id))
+if (length(missing_p0_p1) > 0) {
+  stop(
+    "P0/P1 samples missing from custom Emu results: ",
+    paste(missing_p0_p1, collapse = ", ")
+  )
+}
+
+p0_p1_custom_data <- custom_raw %>%
+  filter(sample_id %in% p0_p1_key$sample_id) %>%
+  select(
+    sample_id,
+    species,
+    abundance_pct = emu_abundance_pct_renormalized_among_expected
+  ) %>%
+  complete(
+    sample_id = p0_p1_key$sample_id,
+    species = species_order,
+    fill = list(abundance_pct = 0)
+  ) %>%
+  left_join(p0_p1_key, by = "sample_id") %>%
+  mutate(
+    passage = factor(passage, levels = c("P0", "P1")),
+    species = factor(species, levels = species_order)
+  ) %>%
+  arrange(passage_order, species)
+
+kable(
+  p0_p1_custom_data,
+  digits = 3,
+  caption = "Custom Emu composition used for the P0-P1 comparison"
+)
+```
+
+```{r plot-p0-p1-custom-emu, fig.width=9, fig.height=5.5}
+p0_p1_custom_plot <- ggplot(
+  p0_p1_custom_data,
+  aes(x = passage, y = abundance_pct, fill = species)
+) +
+  geom_col(width = 0.68, color = "white", linewidth = 0.2) +
+  scale_fill_manual(values = species_colors[species_order], drop = FALSE) +
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 20),
+    labels = label_number(suffix = "%"),
+    expand = expansion(mult = c(0, 0))
+  ) +
+  coord_cartesian(ylim = c(0, 100)) +
+  labs(
+    x = NULL,
+    y = "Abundance among five expected species",
+    fill = NULL,
+    title = "Custom Emu composition: P0 versus P1",
+    subtitle = "P0 = sample 1; P1 = sample 16",
+    caption = "P0 has lower sequencing depth and should be interpreted cautiously."
+  ) +
+  theme_16s +
+  guides(fill = guide_legend(nrow = 2, byrow = TRUE)) +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    legend.text = element_text(size = 8)
+  )
+
+p0_p1_custom_plot
+```
+
+```{r save-p0-p1-custom-emu}
+write_tsv(
+  p0_p1_custom_data %>%
+    mutate(
+      passage = as.character(passage),
+      species = as.character(species)
+    ),
+  file.path(table_dir, "p0_p1_custom_emu_stacked.tsv")
+)
+
+ggsave(
+  file.path(figure_dir, "p0_p1_custom_emu_stacked.png"),
+  p0_p1_custom_plot,
+  width = 9,
+  height = 5.5,
+  dpi = 300
+)
+```
+
 # 6. Broad Emu: five known species plus unknown/other
 
 This graph uses assignments from the published broad Emu database, not the
